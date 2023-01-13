@@ -3,7 +3,10 @@
     import { Router, Route } from "svelte-routing";
     import WorkoutInfo from "../lib/components/WorkoutInfo.svelte";
     import SetForm from "../lib/components/SetForm.svelte";
+    import { isLoading } from "../lib/store";
 </script>
+
+<progress class="progress is-small mb-0 hidden {!$isLoading ? 'is-invisible' : ''}" />
 
 <main class="container px-3 pt-3">
     <Router>
@@ -20,4 +23,8 @@
     </Router>
 </main>
 
-<style></style>
+<style>
+    progress {
+        border-radius: 0;
+    }
+</style>

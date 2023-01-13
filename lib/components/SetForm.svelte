@@ -61,7 +61,7 @@
     }
 </script>
 
-<Title text="Neuer Satz" />
+<Title text={setId === null ? "Neuer Satz" : "Satz Bearbeiten"} />
 
 <div class="field">
     <label for="exercise" class="label">Übung</label>

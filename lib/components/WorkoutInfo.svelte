@@ -63,10 +63,6 @@
         },
     ];
 
-    function createSet() {
-        console.warn(`Implement: create set`);
-    }
-
     function editSet(set: Set) {
         navigate(`/workouts/${id}/sets/${set.id}`);
     }
@@ -75,7 +71,7 @@
 <Title text="Workout" />
 
 <div class="block">
-    <Link to="/workouts/{id}/sets/add" class="button is-fullwidth is-primary" on:click={createSet}>
+    <Link to="/workouts/{id}/sets/add" class="button is-fullwidth is-primary">
         <span class="icon">
             <i class="bi bi-plus" />
         </span>

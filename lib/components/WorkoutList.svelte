@@ -3,6 +3,7 @@
     import { Link } from "svelte-routing";
     import Notification from "./Notification.svelte";
     import Modal from "./Modal.svelte";
+    import { isLoading } from "../store";
 
     type Workout = {
         id: number;
@@ -38,6 +39,7 @@
 
     function createWorkout() {
         console.warn(`Implement: create workout`);
+        $isLoading = true;
     }
 </script>
 
