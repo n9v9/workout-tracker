@@ -1,8 +1,14 @@
 <script lang="ts">
-    import { Link, navigate } from "svelte-routing";
+    import { navigate } from "svelte-routing";
+    import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
 
     export let workoutId: string;
+    export let setId: string | null = null;
+
+    if (setId !== null) {
+        console.warn(`read and then set data for existing set with id ${setId}`);
+    }
 
     type Exercise = {
         id: number;
@@ -36,6 +42,7 @@
     let inputExerciseId: number;
     let inputRepetitions: string;
     let inputWeight: string;
+    let showDeleteModal = false;
 
     function checkCanSave() {
         canSave =
@@ -47,6 +54,10 @@
 
     function save() {
         console.warn(`Implement: save set`, inputExerciseId, inputRepetitions, inputWeight);
+    }
+
+    function deleteSet() {
+        console.warn(`Implement: delete set with id`, setId);
     }
 </script>
 
@@ -89,20 +100,51 @@
     </div>
 </div>
 
-<div class="field is-grouped is-grouped-right">
-    <button
-        class="same-width column is-1 is-fullwidth button is-primary is-light"
-        disabled={!canSave}
-        on:click={save}>Speichern</button>
+<div class="btn-group">
+    {#if setId}
+        <button class="button is-danger is-light" on:click={() => (showDeleteModal = true)}
+            >Löschen</button>
+    {/if}
 
-    <!-- Use `navigate` instead of `Link` because with `Link` the color would stay blue. -->
-    <button
-        class="same-width column is-1 is-fullwidth ml-2 button is-light"
-        on:click={() => navigate("/workouts/{workoutId}")}>Abbrechen</button>
+    <button class="button is-light" on:click={() => navigate(`/workouts/${workoutId}`)}
+        >Abbrechen</button>
+
+    <button class="button is-primary is-light" disabled={!canSave} on:click={save}
+        >Speichern</button>
 </div>
 
+{#if showDeleteModal}
+    <Modal
+        title="Satz Löschen"
+        text="Satz wirklich löschen?"
+        confirm={deleteSet}
+        cancel={() => (showDeleteModal = false)} />
+{/if}
+
 <style>
-    .same-width {
+    .btn-group {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+
+    .btn-group button {
         min-width: 109px;
+    }
+
+    .btn-group button:not(:last-child) {
+        margin-right: 0.75rem;
+    }
+
+    @media only screen and (max-width: 768px) {
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            column-gap: 0.75rem;
+        }
+
+        .btn-group button:not(:last-child) {
+            margin-right: 0;
+        }
     }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Link } from "svelte-routing";
+    import { Link, navigate } from "svelte-routing";
     import Title from "../components/Title.svelte";
     import Notification from "./Notification.svelte";
 
@@ -66,6 +66,10 @@
     function createSet() {
         console.warn(`Implement: create set`);
     }
+
+    function editSet(set: Set) {
+        navigate(`/workouts/${id}/sets/${set.id}`);
+    }
 </script>
 
 <Title text="Workout" />
@@ -103,7 +107,7 @@
             </thead>
             <tbody>
                 {#each sets as set}
-                    <tr>
+                    <tr on:click={() => editSet(set)}>
                         <td>{set.exercise}</td>
                         <td>{set.repetitions}</td>
                         <td>{set.weight}</td>

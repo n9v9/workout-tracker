@@ -2,6 +2,7 @@
     import Title from "./Title.svelte";
     import { Link } from "svelte-routing";
     import Notification from "./Notification.svelte";
+    import Modal from "./Modal.svelte";
 
     type Workout = {
         id: number;
@@ -73,21 +74,11 @@
 </div>
 
 {#if showDeleteModal}
-    <div class="modal is-active">
-        <div class="modal-background" />
-        <div class="modal-card">
-            <header class="modal-card-head">
-                <p class="modal-card-title">Workout Löschen</p>
-            </header>
-            <section class="modal-card-body">
-                Workout vom {selectedWorkout.startDateEpochUtc} wirklich löschen?
-            </section>
-            <footer class="modal-card-foot p-3 is-justify-content-flex-end">
-                <button class="button" on:click={deleteWorkout}>Löschen</button>
-                <button class="button" on:click={() => (showDeleteModal = false)}>Abbrechen</button>
-            </footer>
-        </div>
-    </div>
+    <Modal
+        title="Workout Löschen"
+        text={`Workout vom ${selectedWorkout.startDateEpochUtc} wirklich löschen?`}
+        confirm={() => deleteWorkout()}
+        cancel={() => (showDeleteModal = false)} />
 {/if}
 
 <style>

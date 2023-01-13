@@ -2,7 +2,7 @@
     import WorkoutList from "../lib/components/WorkoutList.svelte";
     import { Router, Route } from "svelte-routing";
     import WorkoutInfo from "../lib/components/WorkoutInfo.svelte";
-    import NewSet from "../lib/components/NewSet.svelte";
+    import SetForm from "../lib/components/SetForm.svelte";
 </script>
 
 <main class="container px-3 pt-3">
@@ -12,7 +12,10 @@
             <WorkoutInfo id={params.id} />
         </Route>
         <Route path="/workouts/:id/sets/add" let:params>
-            <NewSet workoutId={params.id} />
+            <SetForm workoutId={params.id} />
+        </Route>
+        <Route path="/workouts/:id/sets/:setId" let:params>
+            <SetForm workoutId={params.id} setId={params.setId} />
         </Route>
     </Router>
 </main>
