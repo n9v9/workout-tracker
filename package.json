@@ -21,6 +21,7 @@
     "dependencies": {
         "bootstrap-icons": "^1.10.3",
         "bulma": "^0.9.4",
-        "rollup-plugin-postcss": "^4.0.2"
+        "rollup-plugin-postcss": "^4.0.2",
+        "svelte-routing": "^1.6.0"
     }
 }

@@ -8,6 +8,7 @@
     "tabWidth": 4,
     "useTabs": false,
     "endOfLine": "lf",
-    "bracketSameLine": false,
+    "htmlWhitespaceSensitivity": "strict",
+    "bracketSameLine": true,
     "bracketSpacing": true
 }
