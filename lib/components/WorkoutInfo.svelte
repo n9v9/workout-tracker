@@ -1,11 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { Link, navigate } from "svelte-routing";
+    import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import Title from "../components/Title.svelte";
-    import { isLoading } from "../store";
+    import { isLoading, uiDisabled } from "../store";
     import Notification from "./Notification.svelte";
     import type { Set } from "../api/types";
+    import Button from "./Button.svelte";
 
     export let id: number;
 
@@ -14,9 +15,11 @@
     onMount(async () => {
         try {
             $isLoading = true;
+            $uiDisabled = true;
             sets = await api.getSetsByWorkoutId(id);
         } finally {
             $isLoading = false;
+            $uiDisabled = false;
         }
     });
 
@@ -28,18 +31,20 @@
 <Title text="Workout" />
 
 <div class="block">
-    <Link to="/workouts/{id}/sets/add" class="button is-fullwidth is-primary">
+    <Button
+        classes="button is-fullwidth is-primary"
+        click={() => navigate(`/workouts/{id}/sets/add`)}>
         <span class="icon">
             <i class="bi bi-plus" />
         </span>
         <span>Neuer Satz</span>
-    </Link>
-    <Link to="/" class="button is-fullwidth mt-2">
+    </Button>
+    <Button classes="button is-fullwidth mt-2" click={() => navigate("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>
         <span>Zur Workout Übersicht</span>
-    </Link>
+    </Button>
 </div>
 
 <div class="block">

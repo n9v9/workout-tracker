@@ -3,7 +3,8 @@
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import type { Exercise } from "../api/types";
-    import { isLoading } from "../store";
+    import { isLoading, uiDisabled } from "../store";
+    import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
 
@@ -22,6 +23,7 @@
     }
 
     onMount(async () => {
+        $uiDisabled = true;
         $isLoading = true;
         try {
             if (setId !== null) {
@@ -41,6 +43,7 @@
 
             checkCanSave();
         } finally {
+            $uiDisabled = false;
             $isLoading = false;
         }
     });
@@ -54,6 +57,7 @@
     }
 
     async function save() {
+        $uiDisabled = true;
         $isLoading = true;
         try {
             await api.saveSet({
@@ -62,13 +66,27 @@
                 repetitions: parseInt(repetitions),
                 weight: parseInt(weight),
             });
+            goBack();
         } finally {
+            $uiDisabled = false;
             $isLoading = false;
         }
     }
 
-    function deleteSet() {
-        console.warn(`Implement: delete set with id`, setId);
+    async function deleteSet() {
+        $uiDisabled = true;
+        $isLoading = true;
+        try {
+            await api.deleteSetById(setId);
+            goBack();
+        } finally {
+            $uiDisabled = false;
+            $isLoading = false;
+        }
+    }
+
+    function goBack() {
+        navigate(`/workouts/${workoutId}`);
     }
 </script>
 
@@ -77,7 +95,7 @@
 <div class="field">
     <label for="exercise" class="label">Übung</label>
     <div class="select is-fullwidth">
-        <select id="exercise" bind:value={exerciseId}>
+        <select id="exercise" bind:value={exerciseId} disabled={$uiDisabled}>
             {#each exercises as exercise}
                 <option value={exercise.id}>{exercise.name}</option>
             {/each}
@@ -94,7 +112,8 @@
             class="input"
             enterkeyhint="next"
             bind:value={repetitions}
-            on:keyup={checkCanSave} />
+            on:keyup={checkCanSave}
+            disabled={$uiDisabled} />
     </div>
 </div>
 
@@ -107,21 +126,29 @@
             class="input"
             enterkeyhint="done"
             bind:value={weight}
-            on:keyup={checkCanSave} />
+            on:keyup={checkCanSave}
+            disabled={$uiDisabled} />
     </div>
 </div>
 
 <div class="btn-group">
-    {#if setId}
-        <button class="button is-danger is-light" on:click={() => (showDeleteModal = true)}
-            >Löschen</button>
-    {/if}
+    <!-- This div is always displayed so that the other two divs are aligned to the right. -->
+    <div>
+        {#if setId}
+            <Button
+                classes="button is-danger is-light is-fullwidth"
+                click={() => (showDeleteModal = true)}>Löschen</Button>
+        {/if}
+    </div>
 
-    <button class="button is-light" on:click={() => navigate(`/workouts/${workoutId}`)}
-        >Abbrechen</button>
+    <div>
+        <Button classes="button is-light is-fullwidth" click={() => goBack()}>Abbrechen</Button>
+    </div>
 
-    <button class="button is-primary is-light" disabled={!canSave} on:click={save}
-        >Speichern</button>
+    <div>
+        <Button classes="button is-primary is-light is-fullwidth" click={save} disabled={!canSave}
+            >Speichern</Button>
+    </div>
 </div>
 
 {#if showDeleteModal}
@@ -139,11 +166,11 @@
         justify-content: flex-end;
     }
 
-    .btn-group button {
+    .btn-group div {
         min-width: 109px;
     }
 
-    .btn-group button:not(:last-child) {
+    .btn-group div:not(:last-child) {
         margin-right: 0.75rem;
     }
 
@@ -154,7 +181,7 @@
             column-gap: 0.75rem;
         }
 
-        .btn-group button:not(:last-child) {
+        .btn-group div:not(:last-child) {
             margin-right: 0;
         }
     }

@@ -20,7 +20,7 @@ class ApiService {
                         startDateEpochUtc: "6",
                     },
                 ]);
-            }, 1500);
+            }, 1000);
         });
     }
 
@@ -28,7 +28,7 @@ class ApiService {
         console.warn("Implement deleteWorkout, id: ", id);
 
         return new Promise((resolve, _) => {
-            setTimeout(resolve, 1500);
+            setTimeout(resolve, 1000);
         });
     }
 
@@ -42,7 +42,7 @@ class ApiService {
                         id: 15,
                         startDateEpochUtc: "12345678",
                     }),
-                1500,
+                1000,
             );
         });
     }
@@ -86,7 +86,7 @@ class ApiService {
                         weight: 90,
                     },
                 ]);
-            }, 1500);
+            }, 1000);
         });
     }
 
@@ -117,12 +117,12 @@ class ApiService {
                         name: "Squats",
                     },
                 ]);
-            }, 1500);
+            }, 1000);
         });
     }
 
     getSetById(id: number): Promise<Set> {
-        console.warn("Implement getSetById");
+        console.warn("Implement getSetById, id: ", id);
 
         return new Promise((resolve, _) => {
             setTimeout(
@@ -135,7 +135,7 @@ class ApiService {
                         repetitions: 12,
                         weight: 75,
                     }),
-                1500,
+                1000,
             );
         });
     }
@@ -144,7 +144,15 @@ class ApiService {
         console.warn("Implement saveSet:", set);
 
         return new Promise((resolve, _) => {
-            setTimeout(resolve, 1500);
+            setTimeout(resolve, 1000);
+        });
+    }
+
+    deleteSetById(id: number): Promise<void> {
+        console.warn("Implement deleteSetById, id: ", id);
+
+        return new Promise((resolve, _) => {
+            setTimeout(resolve, 1000);
         });
     }
 }

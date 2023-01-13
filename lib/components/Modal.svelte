@@ -1,4 +1,6 @@
 <script lang="ts">
+    import Button from "./Button.svelte";
+
     export let title: string;
     export let text: string;
     export let confirm: () => void;
@@ -13,14 +15,18 @@
         </header>
         <section class="modal-card-body">{text}</section>
         <footer class="modal-card-foot p-3 is-justify-content-flex-end">
-            <button class="button" on:click={cancel}>Abbrechen</button>
-            <button class="button" on:click={confirm}>Löschen</button>
+            <div class="same-width mr-2">
+                <Button classes="button is-fullwidth" click={confirm}>Löschen</Button>
+            </div>
+            <div class="same-width">
+                <Button classes="button is-fullwidth" click={cancel}>Abbrechen</Button>
+            </div>
         </footer>
     </div>
 </div>
 
 <style>
-    button {
+    .same-width {
         min-width: 113px;
     }
 </style>
