@@ -1,45 +1,53 @@
 <script lang="ts">
     import Title from "./Title.svelte";
-    import { Link } from "svelte-routing";
+    import { Link, navigate } from "svelte-routing";
     import Notification from "./Notification.svelte";
     import Modal from "./Modal.svelte";
     import { isLoading } from "../store";
+    import type { Workout } from "../api/types";
+    import { api } from "../api/service";
+    import { onMount } from "svelte";
 
-    type Workout = {
-        id: number;
-        startDateEpochUtc: number;
-    };
-
-    let workouts: Workout[] = [
-        {
-            id: 1,
-            startDateEpochUtc: 2,
-        },
-        {
-            id: 3,
-            startDateEpochUtc: 4,
-        },
-        {
-            id: 5,
-            startDateEpochUtc: 6,
-        },
-    ];
-
+    let workouts: Workout[] = [];
     let showDeleteModal = false;
     let selectedWorkout: Workout;
+
+    onMount(loadWorkoutList);
 
     function confirmDeletion(workout: Workout) {
         selectedWorkout = workout;
         showDeleteModal = true;
     }
 
-    function deleteWorkout() {
-        console.warn(`Implement: delete workout`, selectedWorkout);
+    async function deleteWorkout() {
+        $isLoading = true;
+        try {
+            await api.deleteWorkout(selectedWorkout.id);
+            showDeleteModal = false;
+            await loadWorkoutList();
+        } finally {
+            $isLoading = false;
+            showDeleteModal = false;
+        }
     }
 
-    function createWorkout() {
-        console.warn(`Implement: create workout`);
+    async function createWorkout() {
         $isLoading = true;
+        try {
+            var workout = await api.createWorkout();
+            navigate(`/workouts/${workout.id}`);
+        } finally {
+            $isLoading = false;
+        }
+    }
+
+    async function loadWorkoutList() {
+        $isLoading = true;
+        try {
+            workouts = await api.getWorkoutList();
+        } finally {
+            $isLoading = false;
+        }
     }
 </script>
 

@@ -1,67 +1,24 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { Link, navigate } from "svelte-routing";
+    import { api } from "../api/service";
     import Title from "../components/Title.svelte";
+    import { isLoading } from "../store";
     import Notification from "./Notification.svelte";
+    import type { Set } from "../api/types";
 
-    export let id: string;
+    export let id: number;
 
-    type Set = {
-        id: number;
-        exercise: string;
-        repetitions: number;
-        weight: number;
-    };
+    let sets: Set[] = [];
 
-    let sets: Set[] = [
-        {
-            id: 1,
-            exercise: "Dehnen",
-            repetitions: 1,
-            weight: 0,
-        },
-        {
-            id: 2,
-            exercise: "Deadlifts",
-            repetitions: 6,
-            weight: 90,
-        },
-        {
-            id: 3,
-            exercise: "Squats",
-            repetitions: 8,
-            weight: 100,
-        },
-        {
-            id: 4,
-            exercise: "Arme",
-            repetitions: 12,
-            weight: 54,
-        },
-        {
-            id: 1,
-            exercise: "Dehnen",
-            repetitions: 1,
-            weight: 0,
-        },
-        {
-            id: 2,
-            exercise: "Deadlifts",
-            repetitions: 6,
-            weight: 90,
-        },
-        {
-            id: 3,
-            exercise: "Squats",
-            repetitions: 8,
-            weight: 100,
-        },
-        {
-            id: 4,
-            exercise: "Arme",
-            repetitions: 12,
-            weight: 54,
-        },
-    ];
+    onMount(async () => {
+        try {
+            $isLoading = true;
+            sets = await api.getSetsByWorkoutId(id);
+        } finally {
+            $isLoading = false;
+        }
+    });
 
     function editSet(set: Set) {
         navigate(`/workouts/${id}/sets/${set.id}`);
@@ -104,7 +61,7 @@
             <tbody>
                 {#each sets as set}
                     <tr on:click={() => editSet(set)}>
-                        <td>{set.exercise}</td>
+                        <td>{set.exerciseName}</td>
                         <td>{set.repetitions}</td>
                         <td>{set.weight}</td>
                     </tr>

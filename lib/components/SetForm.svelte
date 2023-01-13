@@ -1,59 +1,70 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { navigate } from "svelte-routing";
+    import { api } from "../api/service";
+    import type { Exercise } from "../api/types";
+    import { isLoading } from "../store";
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
 
-    export let workoutId: string;
-    export let setId: string | null = null;
+    export let workoutId: number;
+    export let setId: number | null = null;
+
+    let exercises: Exercise[] = [];
+    let exerciseId: number;
+    let repetitions: string;
+    let weight: string;
+    let canSave = false;
+    let showDeleteModal = false;
 
     if (setId !== null) {
         console.warn(`read and then set data for existing set with id ${setId}`);
     }
 
-    type Exercise = {
-        id: number;
-        name: string;
-    };
+    onMount(async () => {
+        $isLoading = true;
+        try {
+            if (setId !== null) {
+                const result = await Promise.all([api.getExercises(), api.getSetById(setId)]);
+                const set = result[1];
 
-    let exercises: Exercise[] = [
-        {
-            id: 1,
-            name: "Dehnen",
-        },
-        {
-            id: 2,
-            name: "Deadlift",
-        },
-        {
-            id: 3,
-            name: "Beinpresse",
-        },
-        {
-            id: 4,
-            name: "Handstand",
-        },
-        {
-            id: 5,
-            name: "Squats",
-        },
-    ];
+                exercises = result[0];
+                exerciseId = set.exerciseId;
+                repetitions = set.repetitions.toString();
+                weight = set.weight.toString();
+            } else {
+                exercises = await api.getExercises();
+                exerciseId = exercises[0].id;
+                repetitions = "0";
+                weight = "0";
+            }
 
-    let canSave = false;
-    let inputExerciseId: number;
-    let inputRepetitions: string;
-    let inputWeight: string;
-    let showDeleteModal = false;
+            checkCanSave();
+        } finally {
+            $isLoading = false;
+        }
+    });
 
     function checkCanSave() {
         canSave =
-            inputRepetitions !== "" &&
-            inputWeight !== "" &&
-            parseInt(inputRepetitions) > 0 &&
-            parseInt(inputWeight) >= 0;
+            repetitions !== "" &&
+            weight !== "" &&
+            parseInt(repetitions) > 0 &&
+            parseInt(weight) >= 0;
     }
 
-    function save() {
-        console.warn(`Implement: save set`, inputExerciseId, inputRepetitions, inputWeight);
+    async function save() {
+        $isLoading = true;
+        try {
+            await api.saveSet({
+                id: setId,
+                exerciseId: exerciseId,
+                repetitions: parseInt(repetitions),
+                weight: parseInt(weight),
+            });
+        } finally {
+            $isLoading = false;
+        }
     }
 
     function deleteSet() {
@@ -66,7 +77,7 @@
 <div class="field">
     <label for="exercise" class="label">Übung</label>
     <div class="select is-fullwidth">
-        <select id="exercise" bind:value={inputExerciseId}>
+        <select id="exercise" bind:value={exerciseId}>
             {#each exercises as exercise}
                 <option value={exercise.id}>{exercise.name}</option>
             {/each}
@@ -82,7 +93,7 @@
             id="repetitions"
             class="input"
             enterkeyhint="next"
-            bind:value={inputRepetitions}
+            bind:value={repetitions}
             on:keyup={checkCanSave} />
     </div>
 </div>
@@ -95,7 +106,7 @@
             id="weight"
             class="input"
             enterkeyhint="done"
-            bind:value={inputWeight}
+            bind:value={weight}
             on:keyup={checkCanSave} />
     </div>
 </div>

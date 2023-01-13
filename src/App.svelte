@@ -12,13 +12,13 @@
     <Router>
         <Route path="/" component={WorkoutList} />
         <Route path="/workouts/:id" let:params>
-            <WorkoutInfo id={params.id} />
+            <WorkoutInfo id={parseInt(params.id)} />
         </Route>
         <Route path="/workouts/:id/sets/add" let:params>
-            <SetForm workoutId={params.id} />
+            <SetForm workoutId={parseInt(params.id)} />
         </Route>
         <Route path="/workouts/:id/sets/:setId" let:params>
-            <SetForm workoutId={params.id} setId={params.setId} />
+            <SetForm workoutId={parseInt(params.id)} setId={parseInt(params.setId)} />
         </Route>
     </Router>
 </main>
@@ -26,5 +26,6 @@
 <style>
     progress {
         border-radius: 0;
+        height: 0.5rem !important;
     }
 </style>
