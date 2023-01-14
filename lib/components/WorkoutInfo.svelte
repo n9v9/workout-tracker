@@ -33,7 +33,7 @@
 <div class="block">
     <Button
         classes="button is-fullwidth is-primary"
-        click={() => navigate(`/workouts/{id}/sets/add`)}>
+        click={() => navigate(`/workouts/${id}/sets/add`)}>
         <span class="icon">
             <i class="bi bi-plus" />
         </span>
