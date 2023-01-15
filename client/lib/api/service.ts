@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "../store";
 import type { EditSet, Exercise, Set, Workout } from "./types";
 
 class ApiService {
@@ -155,6 +156,10 @@ class ApiService {
             setTimeout(resolve, 1000);
         });
     }
+}
+
+function setApiErrorMessage(message: string) {
+    apiErrorMessage.set(message);
 }
 
 export const api = new ApiService();
