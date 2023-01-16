@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -137,6 +140,16 @@ func (a *application) routes() {
 		return logging.Then(h)
 	})
 
+	//
+	// Static files handlers
+	//
+	a.router.Get("/", a.handleIndex())
+	a.router.Get("/index.html", a.handleIndex())
+	a.router.Get("/assets/*", a.handleAssets())
+
+	//
+	// API handlers
+	//
 	a.router.Get("/api/exercises", a.handleGetExercises)
 
 	a.router.Get("/api/workouts", a.handleGetWorkoutList)
@@ -148,6 +161,28 @@ func (a *application) routes() {
 	a.router.Post("/api/workouts/{workoutID}/sets", a.handleCreateSet)
 	a.router.Put("/api/workouts/{workoutID}/sets/{setID}", a.handleUpdateSet)
 	a.router.Delete("/api/workouts/{workoutID}/sets/{setID}", a.handleDeleteSet)
+}
+
+func (a *application) handleIndex() http.HandlerFunc {
+	file, err := os.ReadFile(filepath.Join(a.staticFilesDir, "index.html"))
+	if err != nil {
+		log.Err(err).Msg("Failed to read index.html file.")
+		os.Exit(1)
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(w, bytes.NewReader(file)); err != nil {
+			hlog.FromRequest(r).Err(err).Msg("Failed to serve index.html file")
+		}
+	}
+}
+
+func (a *application) handleAssets() http.HandlerFunc {
+	server := http.FileServer(http.Dir(a.staticFilesDir))
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		server.ServeHTTP(w, r)
+	}
 }
 
 func (a *application) handleGetExercises(w http.ResponseWriter, r *http.Request) {
