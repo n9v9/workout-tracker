@@ -18,16 +18,15 @@
     let canSave = false;
     let showDeleteModal = false;
 
-    if (setId !== null) {
-        console.warn(`read and then set data for existing set with id ${setId}`);
-    }
-
     onMount(async () => {
         $uiDisabled = true;
         $isLoading = true;
         try {
             if (setId !== null) {
-                const result = await Promise.all([api.getExercises(), api.getSetById(setId)]);
+                const result = await Promise.all([
+                    api.getExercises(),
+                    api.getSetByIds(workoutId, setId),
+                ]);
                 const set = result[1];
 
                 exercises = result[0];
@@ -60,8 +59,8 @@
         $uiDisabled = true;
         $isLoading = true;
         try {
-            await api.saveSet({
-                id: setId,
+            await api.createOrUpdateSet(workoutId, {
+                setId: setId,
                 exerciseId: exerciseId,
                 repetitions: parseInt(repetitions),
                 weight: parseInt(weight),
@@ -77,7 +76,7 @@
         $uiDisabled = true;
         $isLoading = true;
         try {
-            await api.deleteSetById(setId);
+            await api.deleteSetById(workoutId, setId);
             goBack();
         } finally {
             $uiDisabled = false;

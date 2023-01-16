@@ -1,6 +1,6 @@
 export type Workout = {
     id: number;
-    startDateEpochUtc: string;
+    startedUtc: string;
 };
 
 export type Exercise = {
@@ -18,7 +18,7 @@ export type Set = {
 };
 
 export type EditSet = {
-    id: number | null;
+    setId: number | null;
     exerciseId: number;
     repetitions: number;
     weight: number;

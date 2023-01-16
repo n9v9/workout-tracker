@@ -38,8 +38,8 @@
         $uiDisabled = true;
         $isLoading = true;
         try {
-            var workout = await api.createWorkout();
-            navigate(`/workouts/${workout.id}`);
+            var id = await api.createWorkout();
+            navigate(`/workouts/${id}`);
         } finally {
             $uiDisabled = false;
             $isLoading = false;
@@ -77,7 +77,7 @@
             <Button
                 classes="button is-expanded is-justify-content-flex-start"
                 click={() => navigate(`/workouts/${workout.id}`)}>
-                {workout.id}
+                {workout.startedUtc}
             </Button>
             <Button classes="button" click={() => confirmDeletion(workout)}>
                 <span class="icon has-text-danger">
@@ -93,7 +93,7 @@
 {#if showDeleteModal}
     <Modal
         title="Workout Löschen"
-        text={`Workout vom ${selectedWorkout.startDateEpochUtc} wirklich löschen?`}
+        text={`Workout vom ${selectedWorkout.startedUtc} wirklich löschen?`}
         confirm={() => deleteWorkout()}
         cancel={() => (showDeleteModal = false)} />
 {/if}

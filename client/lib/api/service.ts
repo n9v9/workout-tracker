@@ -1,160 +1,102 @@
+import SetForm from "../components/SetForm.svelte";
 import { apiErrorMessage } from "../store";
 import type { EditSet, Exercise, Set, Workout } from "./types";
 
 class ApiService {
-    getWorkoutList(): Promise<Workout[]> {
-        console.warn("Implement getWorkoutList");
+    private prefix = "/api";
 
-        return new Promise((resolve, _) => {
-            setTimeout(() => {
-                resolve([
-                    {
-                        id: 1,
-                        startDateEpochUtc: "2",
-                    },
-                    {
-                        id: 3,
-                        startDateEpochUtc: "4",
-                    },
-                    {
-                        id: 5,
-                        startDateEpochUtc: "6",
-                    },
-                ]);
-            }, 1000);
-        });
+    async getWorkoutList(): Promise<Workout[]> {
+        try {
+            const result = await fetch(`${this.prefix}/workouts`);
+            const json = await result.json();
+            return json as Workout[];
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    deleteWorkout(id: number): Promise<void> {
-        console.warn("Implement deleteWorkout, id: ", id);
-
-        return new Promise((resolve, _) => {
-            setTimeout(resolve, 1000);
-        });
+    async deleteWorkout(id: number): Promise<void> {
+        try {
+            await fetch(`${this.prefix}/workouts/${id}`, {
+                method: "DELETE",
+            });
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    createWorkout(): Promise<Workout> {
-        console.warn("Implement createWorkout");
-
-        return new Promise((resolve, _) => {
-            setTimeout(
-                () =>
-                    resolve({
-                        id: 15,
-                        startDateEpochUtc: "12345678",
-                    }),
-                1000,
-            );
-        });
+    async createWorkout(): Promise<number> {
+        try {
+            const result = await fetch(`${this.prefix}/workouts`, {
+                method: "POST",
+            });
+            const json = await result.json();
+            return json.id;
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    getSetsByWorkoutId(id: number): Promise<Set[]> {
-        console.warn("Implement getSetsByWorkoutId, id: ", id);
-
-        return new Promise((resolve, _) => {
-            setTimeout(() => {
-                resolve([
-                    {
-                        id: 1,
-                        exerciseId: 1,
-                        exerciseName: "Dehnen",
-                        dateEpochUtc: "110923123",
-                        repetitions: 1,
-                        weight: 0,
-                    },
-                    {
-                        id: 2,
-                        exerciseId: 9,
-                        exerciseName: "Handstand",
-                        dateEpochUtc: "123234131",
-                        repetitions: 3,
-                        weight: 0,
-                    },
-                    {
-                        id: 3,
-                        exerciseId: 4,
-                        exerciseName: "Squats",
-                        dateEpochUtc: "123123131",
-                        repetitions: 8,
-                        weight: 100,
-                    },
-                    {
-                        id: 4,
-                        exerciseId: 7,
-                        exerciseName: "Deadlifts",
-                        dateEpochUtc: "4231231234",
-                        repetitions: 8,
-                        weight: 90,
-                    },
-                ]);
-            }, 1000);
-        });
+    async getSetsByWorkoutId(id: number): Promise<Set[]> {
+        try {
+            const result = await fetch(`${this.prefix}/workouts/${id}/sets`);
+            const json = await result.json();
+            return json as Set[];
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    getExercises(): Promise<Exercise[]> {
-        console.warn("Implement getExercises");
-
-        return new Promise((resolve, _) => {
-            setTimeout(() => {
-                resolve([
-                    {
-                        id: 1,
-                        name: "Dehnen",
-                    },
-                    {
-                        id: 2,
-                        name: "Deadlift",
-                    },
-                    {
-                        id: 3,
-                        name: "Beinpresse",
-                    },
-                    {
-                        id: 4,
-                        name: "Handstand",
-                    },
-                    {
-                        id: 5,
-                        name: "Squats",
-                    },
-                ]);
-            }, 1000);
-        });
+    async getExercises(): Promise<Exercise[]> {
+        try {
+            const result = await fetch(`${this.prefix}/exercises`);
+            const json = await result.json();
+            return json as Exercise[];
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    getSetById(id: number): Promise<Set> {
-        console.warn("Implement getSetById, id: ", id);
-
-        return new Promise((resolve, _) => {
-            setTimeout(
-                () =>
-                    resolve({
-                        id: 19,
-                        dateEpochUtc: "1234567923",
-                        exerciseId: 2,
-                        exerciseName: "Deadlift",
-                        repetitions: 12,
-                        weight: 75,
-                    }),
-                1000,
-            );
-        });
+    async getSetByIds(workoutId: number, setId: number): Promise<Set> {
+        try {
+            const result = await fetch(`${this.prefix}/workouts/${workoutId}/sets/${setId}`);
+            const json = await result.json();
+            return json as Set;
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    saveSet(set: EditSet): Promise<void> {
-        console.warn("Implement saveSet:", set);
+    async createOrUpdateSet(workoutId: number, set: EditSet): Promise<void> {
+        let promise: Promise<Response>;
 
-        return new Promise((resolve, _) => {
-            setTimeout(resolve, 1000);
-        });
+        if (set.setId === null) {
+            promise = fetch(`${this.prefix}/workouts/${workoutId}/sets`, {
+                method: "POST",
+                body: JSON.stringify(set),
+            });
+        } else {
+            promise = fetch(`${this.prefix}/workouts/${workoutId}/sets/${set.setId}`, {
+                method: "PUT",
+                body: JSON.stringify(set),
+            });
+        }
+
+        try {
+            await promise;
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 
-    deleteSetById(id: number): Promise<void> {
-        console.warn("Implement deleteSetById, id: ", id);
-
-        return new Promise((resolve, _) => {
-            setTimeout(resolve, 1000);
-        });
+    async deleteSetById(workoutId: number, setId: number): Promise<void> {
+        try {
+            await fetch(`${this.prefix}/workouts/${workoutId}/sets/${setId}`, {
+                method: "DELETE",
+            });
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
     }
 }
 
