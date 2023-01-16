@@ -22,23 +22,18 @@
         $uiDisabled = true;
         $isLoading = true;
         try {
-            if (setId !== null) {
-                const result = await Promise.all([
-                    api.getExercises(),
-                    api.getSetByIds(workoutId, setId),
-                ]);
-                const set = result[1];
+            const result = await Promise.all([
+                api.getExercises(),
+                setId !== null
+                    ? api.getSetByIds(workoutId, setId)
+                    : api.getNewSetRecommendation(workoutId),
+            ]);
+            const set = result[1];
 
-                exercises = result[0];
-                exerciseId = set.exerciseId;
-                repetitions = set.repetitions.toString();
-                weight = set.weight.toString();
-            } else {
-                exercises = await api.getExercises();
-                exerciseId = exercises[0].id;
-                repetitions = "0";
-                weight = "0";
-            }
+            exercises = result[0];
+            exerciseId = set.exerciseId;
+            repetitions = set.repetitions.toString();
+            weight = set.weight.toString();
 
             checkCanSave();
         } finally {

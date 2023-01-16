@@ -98,6 +98,16 @@ class ApiService {
             setApiErrorMessage(err);
         }
     }
+
+    async getNewSetRecommendation(workoutId: number): Promise<Set> {
+        try {
+            const result = await fetch(`${this.prefix}/workouts/${workoutId}/sets/recommendation`);
+            const json = await result.json();
+            return json as Set;
+        } catch (err) {
+            setApiErrorMessage(err);
+        }
+    }
 }
 
 function setApiErrorMessage(message: string) {

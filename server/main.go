@@ -161,6 +161,8 @@ func (a *application) routes() {
 	a.router.Post("/api/workouts/{workoutID}/sets", a.handleCreateSet)
 	a.router.Put("/api/workouts/{workoutID}/sets/{setID}", a.handleUpdateSet)
 	a.router.Delete("/api/workouts/{workoutID}/sets/{setID}", a.handleDeleteSet)
+
+	a.router.Get("/api/workouts/{workoutID}/sets/recommendation", a.handleNewSetRecommendation)
 }
 
 func (a *application) handleIndex() http.HandlerFunc {
@@ -353,6 +355,33 @@ func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, r, response(set))
+}
+
+func (a *application) handleNewSetRecommendation(w http.ResponseWriter, r *http.Request) {
+	l := *hlog.FromRequest(r)
+
+	workoutID, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
+	if err != nil {
+		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	l = l.With().Int("workout_id", workoutID).Logger()
+
+	result, err := a.db.newSetRecommendation(r.Context(), workoutID)
+	if err != nil {
+		l.Err(err).Msg("Failed to get recommendation for new set.")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	type response struct {
+		ExerciseID  int `json:"exerciseId"`
+		Repetitions int `json:"repetitions"`
+		Weight      int `json:"weight"`
+	}
+
+	writeJSON(w, r, response(result))
 }
 
 func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
@@ -729,4 +758,42 @@ func (d *Database) updateSet(
 	}
 
 	return nil
+}
+
+type SetRecommendation struct {
+	ExerciseID  int `db:"exercise_id"`
+	Repetitions int `db:"repetitions"`
+	Weight      int `db:"weight"`
+}
+
+func (d *Database) newSetRecommendation(ctx context.Context, workoutID int) (SetRecommendation, error) {
+	// Very simple recommendation, just recommend the last set.
+	const query = `
+		SELECT
+			exercise_id,
+			repetitions,
+			weight
+		FROM
+			exercise_set
+		WHERE
+			workout_id = ?
+		ORDER BY
+			date_utc DESC
+		LIMIT 1
+	`
+
+	var recommendation SetRecommendation
+
+	if err := d.db.GetContext(ctx, &recommendation, query, workoutID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Set some defaults, in case there are no sets yet.
+			recommendation.ExerciseID = -1
+			recommendation.Repetitions = 0
+			recommendation.Weight = 0
+			return recommendation, nil
+		}
+		return SetRecommendation{}, err
+	}
+
+	return recommendation, nil
 }
