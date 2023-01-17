@@ -18,6 +18,8 @@
     let canSave = false;
     let showDeleteModal = false;
 
+    let inputWeight: HTMLInputElement;
+
     onMount(async () => {
         $uiDisabled = true;
         $isLoading = true;
@@ -106,7 +108,13 @@
             class="input"
             enterkeyhint="next"
             bind:value={repetitions}
-            on:keyup={checkCanSave}
+            on:keyup={e => {
+                if (e.key == "Enter") {
+                    inputWeight.focus();
+                } else {
+                    checkCanSave();
+                }
+            }}
             disabled={$uiDisabled} />
     </div>
 </div>
@@ -118,9 +126,20 @@
             type="number"
             id="weight"
             class="input"
-            enterkeyhint="done"
+            enterkeyhint="go"
             bind:value={weight}
-            on:keyup={checkCanSave}
+            bind:this={inputWeight}
+            on:keyup={e => {
+                if (e.key === "Enter") {
+                    inputWeight.blur();
+                    if (canSave) {
+                        save();
+                    }
+                }
+                {
+                    checkCanSave();
+                }
+            }}
             disabled={$uiDisabled} />
     </div>
 </div>
