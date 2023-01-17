@@ -1,6 +1,15 @@
 import { apiErrorMessage } from "../store";
 import type { EditSet, Exercise, Set, Workout } from "./types";
 
+type SetEntity = {
+    id: number;
+    exerciseId: number;
+    exerciseName: string;
+    doneSecondsUnixEpoch: number;
+    repetitions: number;
+    weight: number;
+};
+
 class ApiService {
     private prefix = "/api";
 
@@ -34,7 +43,14 @@ class ApiService {
     }
 
     async getSetsByWorkoutId(id: number): Promise<Set[]> {
-        return await this.getJson<Set[]>(`/workouts/${id}/sets`);
+        return (await this.getJson<SetEntity[]>(`/workouts/${id}/sets`)).map(x => ({
+            id: x.id,
+            exerciseId: x.exerciseId,
+            exerciseName: x.exerciseName,
+            repetitions: x.repetitions,
+            weight: x.weight,
+            date: new Date(x.doneSecondsUnixEpoch * 1000),
+        }));
     }
 
     async getExercises(): Promise<Exercise[]> {
@@ -42,7 +58,16 @@ class ApiService {
     }
 
     async getSetByIds(workoutId: number, setId: number): Promise<Set> {
-        return await this.getJson<Set>(`/workouts/${workoutId}/sets/${setId}`);
+        const set = await this.getJson<SetEntity>(`/workouts/${workoutId}/sets/${setId}`);
+
+        return {
+            id: set.id,
+            exerciseId: set.exerciseId,
+            exerciseName: set.exerciseName,
+            repetitions: set.repetitions,
+            weight: set.weight,
+            date: new Date(set.doneSecondsUnixEpoch * 1000),
+        };
     }
 
     async createOrUpdateSet(workoutId: number, set: EditSet): Promise<void> {

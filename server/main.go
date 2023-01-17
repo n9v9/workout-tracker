@@ -218,17 +218,14 @@ func (a *application) handleGetWorkoutList(w http.ResponseWriter, r *http.Reques
 	}
 
 	type response struct {
-		ID                    int    `json:"id"`
-		StartSecondsUnixEpoch string `json:"startSecondsUnixEpoch"`
+		ID                    uint64 `json:"id"`
+		StartSecondsUnixEpoch uint64 `json:"startSecondsUnixEpoch"`
 	}
 
 	results := make([]response, 0, len(workouts))
 
 	for _, v := range workouts {
-		results = append(results, response{
-			ID:                    int(v.ID),
-			StartSecondsUnixEpoch: v.StartSecondsUnixEpoch,
-		})
+		results = append(results, response(v))
 	}
 
 	writeJSON(w, r, results)
@@ -301,12 +298,12 @@ func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Re
 	}
 
 	type response struct {
-		ID           int    `json:"id"`
-		ExerciseID   int    `json:"exerciseId"`
-		ExerciseName string `json:"exerciseName"`
-		DateUtc      string `json:"dateUtc"`
-		Repetitions  int    `json:"repetitions"`
-		Weight       int    `json:"weight"`
+		ID                   int    `json:"id"`
+		ExerciseID           int    `json:"exerciseId"`
+		ExerciseName         string `json:"exerciseName"`
+		DoneSecondsUnixEpoch int    `json:"doneSecondsUnixEpoch"`
+		Repetitions          int    `json:"repetitions"`
+		Weight               int    `json:"weight"`
 	}
 
 	results := make([]response, 0, len(sets))
@@ -346,12 +343,12 @@ func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type response struct {
-		ID           int    `json:"id"`
-		ExerciseID   int    `json:"exerciseId"`
-		ExerciseName string `json:"exerciseName"`
-		DateUtc      string `json:"dateUtc"`
-		Repetitions  int    `json:"repetitions"`
-		Weight       int    `json:"weight"`
+		ID                   int    `json:"id"`
+		ExerciseID           int    `json:"exerciseId"`
+		ExerciseName         string `json:"exerciseName"`
+		DoneSecondsUnixEpoch int    `json:"doneSecondsUnixEpoch"`
+		Repetitions          int    `json:"repetitions"`
+		Weight               int    `json:"weight"`
 	}
 
 	writeJSON(w, r, response(set))
@@ -531,7 +528,7 @@ func newDatabase(path string) *Database {
 
 type WorkoutList struct {
 	ID                    uint64 `db:"id"`
-	StartSecondsUnixEpoch string `db:"start_seconds_unix_epoch"`
+	StartSecondsUnixEpoch uint64 `db:"start_seconds_unix_epoch"`
 }
 
 func (d *Database) workoutList(ctx context.Context) ([]WorkoutList, error) {
@@ -595,12 +592,12 @@ func (d *Database) deleteWorkout(ctx context.Context, workoutID int) error {
 }
 
 type WorkoutSet struct {
-	ID           int    `db:"id"`
-	ExerciseID   int    `db:"exercise_id"`
-	ExerciseName string `db:"exercise_name"`
-	DateUtc      string `db:"date_utc"`
-	Repetitions  int    `db:"repetitions"`
-	Weight       int    `db:"weight"`
+	ID                   int    `db:"id"`
+	ExerciseID           int    `db:"exercise_id"`
+	ExerciseName         string `db:"exercise_name"`
+	DoneSecondsUnixEpoch int    `db:"done_seconds_unix_epoch"`
+	Repetitions          int    `db:"repetitions"`
+	Weight               int    `db:"weight"`
 }
 
 func (d *Database) setsForWorkout(ctx context.Context, workoutID int) ([]WorkoutSet, error) {
@@ -609,7 +606,7 @@ func (d *Database) setsForWorkout(ctx context.Context, workoutID int) ([]Workout
 			es.id,
 			es.exercise_id,
 			e.name AS exercise_name,
-			es.date_utc,
+			UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
 			es.repetitions,
 			es.weight
 		FROM
@@ -662,7 +659,7 @@ func (d *Database) setByIds(ctx context.Context, workoutID, setID int) (WorkoutS
 			es.id,
 			es.exercise_id,
 			e.name AS exercise_name,
-			es.date_utc,
+			UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
 			es.repetitions,
 			es.weight
 		FROM

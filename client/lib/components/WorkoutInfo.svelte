@@ -7,16 +7,24 @@
     import Notification from "./Notification.svelte";
     import type { Set } from "../api/types";
     import Button from "./Button.svelte";
+    import Timer from "./Timer.svelte";
 
     export let id: number;
 
     let sets: Set[] = [];
+    let latest: Set | null = null;
 
     onMount(async () => {
         try {
             $isLoading = true;
             $uiDisabled = true;
             sets = await api.getSetsByWorkoutId(id);
+
+            if (sets.length > 0) {
+                latest = sets.reduce((acc, current) => {
+                    return current.date.getTime() > acc.date.getTime() ? current : acc;
+                }, sets[0]);
+            }
         } finally {
             $isLoading = false;
             $uiDisabled = false;
@@ -46,6 +54,12 @@
         <span>Zur Workout Übersicht</span>
     </Button>
 </div>
+
+{#if latest !== null}
+    <div class="block">
+        <Timer text="Zeit seit letztem Satz" reference={latest.date} />
+    </div>
+{/if}
 
 <div class="block">
     <p class="is-size-5 mb-2">Durchgeführte Sätze</p>

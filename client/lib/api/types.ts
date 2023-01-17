@@ -12,7 +12,7 @@ export type Set = {
     id: number;
     exerciseId: number;
     exerciseName: string;
-    dateEpochUtc: string;
+    date: Date;
     repetitions: number;
     weight: number;
 };
