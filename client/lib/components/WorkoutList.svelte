@@ -56,6 +56,18 @@
             $isLoading = false;
         }
     }
+
+    function formatDate(date: Date): string {
+        return (
+            date.toLocaleString("de", {
+                hour: "2-digit",
+                minute: "2-digit",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+            }) + " Uhr"
+        );
+    }
 </script>
 
 <Title text={"Workouts"} />
@@ -70,14 +82,14 @@
 </div>
 
 <div class="block">
-    <p class="is-size-5 mb-2">Bisherige Workouts</p>
+    <p class="is-size-5 mb-2">Bisherige Workouts ({workouts.length})</p>
 
     {#each workouts as workout}
         <div class="workout buttons has-addons">
             <Button
                 classes="button is-expanded is-justify-content-flex-start"
                 click={() => navigate(`/workouts/${workout.id}`)}>
-                {workout.startedUtc}
+                {formatDate(workout.started)}
             </Button>
             <Button classes="button" click={() => confirmDeletion(workout)}>
                 <span class="icon has-text-danger">
@@ -93,7 +105,7 @@
 {#if showDeleteModal}
     <Modal
         title="Workout Löschen"
-        text={`Workout vom ${selectedWorkout.startedUtc} wirklich löschen?`}
+        text={`Workout vom ${formatDate(selectedWorkout.started)} wirklich löschen?`}
         confirm={() => deleteWorkout()}
         cancel={() => (showDeleteModal = false)} />
 {/if}

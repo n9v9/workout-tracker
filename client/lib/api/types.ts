@@ -1,6 +1,6 @@
 export type Workout = {
     id: number;
-    startedUtc: string;
+    started: Date;
 };
 
 export type Exercise = {

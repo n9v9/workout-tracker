@@ -218,16 +218,16 @@ func (a *application) handleGetWorkoutList(w http.ResponseWriter, r *http.Reques
 	}
 
 	type response struct {
-		ID         int    `json:"id"`
-		StartedUTC string `json:"startedUtc"`
+		ID                    int    `json:"id"`
+		StartSecondsUnixEpoch string `json:"startSecondsUnixEpoch"`
 	}
 
 	results := make([]response, 0, len(workouts))
 
 	for _, v := range workouts {
 		results = append(results, response{
-			ID:         int(v.ID),
-			StartedUTC: v.StartedUTC,
+			ID:                    int(v.ID),
+			StartSecondsUnixEpoch: v.StartSecondsUnixEpoch,
 		})
 	}
 
@@ -530,15 +530,15 @@ func newDatabase(path string) *Database {
 }
 
 type WorkoutList struct {
-	ID         uint64 `db:"id"`
-	StartedUTC string `db:"start_date_utc"`
+	ID                    uint64 `db:"id"`
+	StartSecondsUnixEpoch string `db:"start_seconds_unix_epoch"`
 }
 
 func (d *Database) workoutList(ctx context.Context) ([]WorkoutList, error) {
 	const query = `
 		SELECT
 			id,
-			start_date_utc
+			UNIXEPOCH(start_date_utc) AS start_seconds_unix_epoch
 		FROM
 			workout
 		ORDER BY

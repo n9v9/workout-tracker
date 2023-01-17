@@ -5,7 +5,14 @@ class ApiService {
     private prefix = "/api";
 
     async getWorkoutList(): Promise<Workout[]> {
-        return await this.getJson<Workout[]>(`/workouts`);
+        type WorkoutEntity = {
+            id: number;
+            startSecondsUnixEpoch: number;
+        };
+        return (await this.getJson<WorkoutEntity[]>(`/workouts`)).map(x => ({
+            id: x.id,
+            started: new Date(x.startSecondsUnixEpoch * 1000),
+        }));
     }
 
     async deleteWorkout(id: number): Promise<void> {
