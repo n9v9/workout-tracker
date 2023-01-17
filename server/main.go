@@ -92,7 +92,7 @@ type application struct {
 	db             *Database
 }
 
-func newApplication(staticFilesDir string, db string) *application {
+func newApplication(staticFilesDir, db string) *application {
 	app := &application{
 		staticFilesDir: staticFilesDir,
 		router:         chi.NewRouter(),
@@ -115,6 +115,8 @@ func (a *application) run(ctx context.Context, addr string) {
 		<-ctx.Done()
 		server.Shutdown(context.TODO())
 	}()
+
+	log.Info().Str("addr", addr).Msg("Serving REST API on given address.")
 
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		log.Err(err).Msg("HTTP Server ListenAndServe")
