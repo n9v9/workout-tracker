@@ -1,4 +1,3 @@
-import SetForm from "../components/SetForm.svelte";
 import { apiErrorMessage } from "../store";
 import type { EditSet, Exercise, Set, Workout } from "./types";
 
@@ -6,106 +5,105 @@ class ApiService {
     private prefix = "/api";
 
     async getWorkoutList(): Promise<Workout[]> {
-        try {
-            const result = await fetch(`${this.prefix}/workouts`);
-            const json = await result.json();
-            return json as Workout[];
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+        return await this.getJson<Workout[]>(`/workouts`);
     }
 
     async deleteWorkout(id: number): Promise<void> {
-        try {
-            await fetch(`${this.prefix}/workouts/${id}`, {
+        await this.getJson(
+            `/workouts/${id}`,
+            {
                 method: "DELETE",
-            });
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+            },
+            false,
+        );
     }
 
     async createWorkout(): Promise<number> {
-        try {
-            const result = await fetch(`${this.prefix}/workouts`, {
+        return (
+            await this.getJson<{ id: number }>(`/workouts`, {
                 method: "POST",
-            });
-            const json = await result.json();
-            return json.id;
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+            })
+        ).id;
     }
 
     async getSetsByWorkoutId(id: number): Promise<Set[]> {
-        try {
-            const result = await fetch(`${this.prefix}/workouts/${id}/sets`);
-            const json = await result.json();
-            return json as Set[];
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+        return await this.getJson<Set[]>(`/workouts/${id}/sets`);
     }
 
     async getExercises(): Promise<Exercise[]> {
-        try {
-            const result = await fetch(`${this.prefix}/exercises`);
-            const json = await result.json();
-            return json as Exercise[];
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+        return await this.getJson<Exercise[]>(`/exercises`);
     }
 
     async getSetByIds(workoutId: number, setId: number): Promise<Set> {
-        try {
-            const result = await fetch(`${this.prefix}/workouts/${workoutId}/sets/${setId}`);
-            const json = await result.json();
-            return json as Set;
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+        return await this.getJson<Set>(`/workouts/${workoutId}/sets/${setId}`);
     }
 
     async createOrUpdateSet(workoutId: number, set: EditSet): Promise<void> {
         let promise: Promise<Response>;
 
         if (set.setId === null) {
-            promise = fetch(`${this.prefix}/workouts/${workoutId}/sets`, {
-                method: "POST",
-                body: JSON.stringify(set),
-            });
+            promise = this.getJson(
+                `/workouts/${workoutId}/sets`,
+                {
+                    method: "POST",
+                    body: JSON.stringify(set),
+                },
+                false,
+            );
         } else {
-            promise = fetch(`${this.prefix}/workouts/${workoutId}/sets/${set.setId}`, {
-                method: "PUT",
-                body: JSON.stringify(set),
-            });
+            promise = this.getJson(
+                `/workouts/${workoutId}/sets/${set.setId}`,
+                {
+                    method: "PUT",
+                    body: JSON.stringify(set),
+                },
+                false,
+            );
         }
 
-        try {
-            await promise;
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+        await promise;
     }
 
     async deleteSetById(workoutId: number, setId: number): Promise<void> {
-        try {
-            await fetch(`${this.prefix}/workouts/${workoutId}/sets/${setId}`, {
+        await this.getJson(
+            `/workouts/${workoutId}/sets/${setId}`,
+            {
                 method: "DELETE",
-            });
-        } catch (err) {
-            setApiErrorMessage(err);
-        }
+            },
+            false,
+        );
     }
 
     async getNewSetRecommendation(workoutId: number): Promise<Set> {
+        return await this.getJson<Set>(`/workouts/${workoutId}/sets/recommendation`);
+    }
+
+    private async getJson<T>(
+        url: RequestInfo,
+        init: RequestInit = null,
+        returnsJson: boolean = true,
+    ): Promise<T | null> {
         try {
-            const result = await fetch(`${this.prefix}/workouts/${workoutId}/sets/recommendation`);
-            const json = await result.json();
-            return json as Set;
+            if (init !== null) {
+                init.headers = {
+                    ...init.headers,
+                    ["Content-Type"]: "application/json",
+                };
+            }
+
+            const result = await fetch(`${this.prefix}/${url}`, init);
+
+            if (!result.ok) {
+                setApiErrorMessage("No connection to the server.");
+                return null;
+            }
+
+            if (returnsJson) {
+                return (await result.json()) as T;
+            }
         } catch (err) {
-            setApiErrorMessage(err);
+            setApiErrorMessage(`Unexpected error: ${err}`);
+            return null;
         }
     }
 }
