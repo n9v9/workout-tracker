@@ -18,7 +18,7 @@ class ApiService {
             id: number;
             startSecondsUnixEpoch: number;
         };
-        return (await this.getJson<WorkoutEntity[]>(`/workouts`)).map(x => ({
+        return (await this.getJson<WorkoutEntity[]>(`workouts`)).map(x => ({
             id: x.id,
             started: new Date(x.startSecondsUnixEpoch * 1000),
         }));
@@ -26,7 +26,7 @@ class ApiService {
 
     async deleteWorkout(id: number): Promise<void> {
         await this.getJson(
-            `/workouts/${id}`,
+            `workouts/${id}`,
             {
                 method: "DELETE",
             },
@@ -36,14 +36,14 @@ class ApiService {
 
     async createWorkout(): Promise<number> {
         return (
-            await this.getJson<{ id: number }>(`/workouts`, {
+            await this.getJson<{ id: number }>(`workouts`, {
                 method: "POST",
             })
         ).id;
     }
 
     async getSetsByWorkoutId(id: number): Promise<Set[]> {
-        return (await this.getJson<SetEntity[]>(`/workouts/${id}/sets`)).map(x => ({
+        return (await this.getJson<SetEntity[]>(`workouts/${id}/sets`)).map(x => ({
             id: x.id,
             exerciseId: x.exerciseId,
             exerciseName: x.exerciseName,
@@ -54,11 +54,11 @@ class ApiService {
     }
 
     async getExercises(): Promise<Exercise[]> {
-        return await this.getJson<Exercise[]>(`/exercises`);
+        return await this.getJson<Exercise[]>(`exercises`);
     }
 
     async getSetByIds(workoutId: number, setId: number): Promise<Set> {
-        const set = await this.getJson<SetEntity>(`/workouts/${workoutId}/sets/${setId}`);
+        const set = await this.getJson<SetEntity>(`workouts/${workoutId}/sets/${setId}`);
 
         return {
             id: set.id,
@@ -75,7 +75,7 @@ class ApiService {
 
         if (set.setId === null) {
             promise = this.getJson(
-                `/workouts/${workoutId}/sets`,
+                `workouts/${workoutId}/sets`,
                 {
                     method: "POST",
                     body: JSON.stringify(set),
@@ -84,7 +84,7 @@ class ApiService {
             );
         } else {
             promise = this.getJson(
-                `/workouts/${workoutId}/sets/${set.setId}`,
+                `workouts/${workoutId}/sets/${set.setId}`,
                 {
                     method: "PUT",
                     body: JSON.stringify(set),
@@ -98,7 +98,7 @@ class ApiService {
 
     async deleteSetById(workoutId: number, setId: number): Promise<void> {
         await this.getJson(
-            `/workouts/${workoutId}/sets/${setId}`,
+            `workouts/${workoutId}/sets/${setId}`,
             {
                 method: "DELETE",
             },
@@ -107,7 +107,7 @@ class ApiService {
     }
 
     async getNewSetRecommendation(workoutId: number): Promise<Set> {
-        return await this.getJson<Set>(`/workouts/${workoutId}/sets/recommendation`);
+        return await this.getJson<Set>(`workouts/${workoutId}/sets/recommendation`);
     }
 
     private async getJson<T>(
