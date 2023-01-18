@@ -4,7 +4,7 @@
     export let text: string;
     export let reference: Date;
 
-    let elapsedSeconds = Math.floor((Date.now() - reference.getTime()) / 1000);
+    let elapsedSeconds: number = 0;
     let timerId: NodeJS.Timer;
     let minutes: string;
     let seconds: string;
@@ -16,13 +16,21 @@
         seconds = (elapsedSeconds % 60).toString().padStart(2, "0");
     }
 
+    calculateDifference();
+
     onMount(() => {
-        timerId = setInterval(() => {
-            elapsedSeconds += 1;
-        }, 1000);
+        timerId = setInterval(calculateDifference, 1000);
     });
 
     onDestroy(() => clearInterval(timerId));
+
+    function calculateDifference() {
+        // Instead of just adding 1 to elapsedSecond, every second,
+        // we calculate the delta of the reference time and the current time.
+        // Need to do it this way, because on e.g. Firefox on Android `setInterval`
+        // is only executed when the tab is active.
+        elapsedSeconds = Math.floor((Date.now() - reference.getTime()) / 1000);
+    }
 </script>
 
 <!-- Only show the timer up until one hour. -->
