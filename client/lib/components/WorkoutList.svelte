@@ -79,6 +79,12 @@
         </span>
         <span>Neues Workout</span>
     </Button>
+    <Button classes="button is-fullwidth is-info mt-2" click={() => navigate("/statistiken")}>
+        <span class="icon">
+            <i class="bi bi-graph-up-arrow" />
+        </span>
+        <span>Statistiken</span>
+    </Button>
 </div>
 
 <div class="block">

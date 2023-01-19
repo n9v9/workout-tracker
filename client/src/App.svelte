@@ -4,6 +4,7 @@
     import WorkoutInfo from "../lib/components/WorkoutInfo.svelte";
     import SetForm from "../lib/components/SetForm.svelte";
     import { isLoading, apiErrorMessage } from "../lib/store";
+    import Statistics from "../lib/components/Statistics.svelte";
 </script>
 
 <progress class="progress is-small mb-0 hidden {!$isLoading ? 'is-invisible' : ''}" />
@@ -25,6 +26,9 @@
         </Route>
         <Route path="/workouts/:id/sets/:setId" let:params>
             <SetForm workoutId={parseInt(params.id)} setId={parseInt(params.setId)} />
+        </Route>
+        <Route path="/statistiken">
+            <Statistics />
         </Route>
     </Router>
 </main>
