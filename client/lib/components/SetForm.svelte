@@ -84,6 +84,11 @@
     function goBack() {
         navigate(`/workouts/${workoutId}`);
     }
+
+    function selectText(e: FocusEvent) {
+        const input = e.target as HTMLInputElement;
+        input.select();
+    }
 </script>
 
 <Title text={setId === null ? "Neuer Satz" : "Satz Bearbeiten"} />
@@ -108,6 +113,7 @@
             class="input"
             enterkeyhint="next"
             bind:value={repetitions}
+            on:focus={selectText}
             on:keyup={e => {
                 if (e.key == "Enter") {
                     inputWeight.focus();
@@ -129,6 +135,7 @@
             enterkeyhint="go"
             bind:value={weight}
             bind:this={inputWeight}
+            on:focus={selectText}
             on:keyup={e => {
                 if (e.key === "Enter") {
                     inputWeight.blur();
