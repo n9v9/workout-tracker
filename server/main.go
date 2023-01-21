@@ -294,6 +294,15 @@ func (a *application) handleDeleteWorkout(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
+type setResponse struct {
+	ID                   int    `json:"id"`
+	ExerciseID           int    `json:"exerciseId"`
+	ExerciseName         string `json:"exerciseName"`
+	DoneSecondsUnixEpoch int    `json:"doneSecondsUnixEpoch"`
+	Repetitions          int    `json:"repetitions"`
+	Weight               int    `json:"weight"`
+}
+
 func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Request) {
 	workoutID, ok := paramInt(w, r, "workoutID")
 	if !ok {
@@ -307,19 +316,10 @@ func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	type response struct {
-		ID                   int    `json:"id"`
-		ExerciseID           int    `json:"exerciseId"`
-		ExerciseName         string `json:"exerciseName"`
-		DoneSecondsUnixEpoch int    `json:"doneSecondsUnixEpoch"`
-		Repetitions          int    `json:"repetitions"`
-		Weight               int    `json:"weight"`
-	}
-
-	results := make([]response, 0, len(sets))
+	results := make([]setResponse, 0, len(sets))
 
 	for _, v := range sets {
-		results = append(results, response(v))
+		results = append(results, setResponse(v))
 	}
 
 	writeJSON(w, r, results)
@@ -343,16 +343,7 @@ func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type response struct {
-		ID                   int    `json:"id"`
-		ExerciseID           int    `json:"exerciseId"`
-		ExerciseName         string `json:"exerciseName"`
-		DoneSecondsUnixEpoch int    `json:"doneSecondsUnixEpoch"`
-		Repetitions          int    `json:"repetitions"`
-		Weight               int    `json:"weight"`
-	}
-
-	writeJSON(w, r, response(set))
+	writeJSON(w, r, setResponse(set))
 }
 
 func (a *application) handleNewSetRecommendation(w http.ResponseWriter, r *http.Request) {
@@ -518,12 +509,12 @@ func newDatabase(path string) *database {
 	return &database{db}
 }
 
-type workoutList struct {
+type workoutRow struct {
 	ID                    uint64 `db:"id"`
 	StartSecondsUnixEpoch uint64 `db:"start_seconds_unix_epoch"`
 }
 
-func (d *database) workoutList(ctx context.Context) ([]workoutList, error) {
+func (d *database) workoutList(ctx context.Context) ([]workoutRow, error) {
 	const query = `
 		SELECT
 			id,
@@ -533,7 +524,7 @@ func (d *database) workoutList(ctx context.Context) ([]workoutList, error) {
 		ORDER BY
 			start_date_utc DESC`
 
-	var result []workoutList
+	var result []workoutRow
 
 	if err := d.db.SelectContext(ctx, &result, query); err != nil {
 		return nil, err
@@ -542,9 +533,7 @@ func (d *database) workoutList(ctx context.Context) ([]workoutList, error) {
 	return result, nil
 }
 
-type CreateWorkoutID int
-
-func (d *database) createWorkout(ctx context.Context) (CreateWorkoutID, error) {
+func (d *database) createWorkout(ctx context.Context) (int64, error) {
 	const query = `
 		INSERT INTO workout (start_date_utc)
 		VALUES (DATETIME('now'))
@@ -560,7 +549,7 @@ func (d *database) createWorkout(ctx context.Context) (CreateWorkoutID, error) {
 		return 0, err
 	}
 
-	return CreateWorkoutID(id), nil
+	return id, nil
 }
 
 func (d *database) deleteWorkout(ctx context.Context, workoutID int) error {
@@ -583,7 +572,7 @@ func (d *database) deleteWorkout(ctx context.Context, workoutID int) error {
 	return nil
 }
 
-type workoutSet struct {
+type setRow struct {
 	ID                   int    `db:"id"`
 	ExerciseID           int    `db:"exercise_id"`
 	ExerciseName         string `db:"exercise_name"`
@@ -592,7 +581,7 @@ type workoutSet struct {
 	Weight               int    `db:"weight"`
 }
 
-func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]workoutSet, error) {
+func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]setRow, error) {
 	const query = `
 		SELECT
 			es.id,
@@ -611,7 +600,7 @@ func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]workout
 			es.date_utc DESC
 	`
 
-	var sets []workoutSet
+	var sets []setRow
 
 	if err := d.db.SelectContext(ctx, &sets, query, workoutID); err != nil {
 		return nil, err
@@ -620,12 +609,12 @@ func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]workout
 	return sets, nil
 }
 
-type exercise struct {
+type exerciseRow struct {
 	ID   int    `db:"id"`
 	Name string `db:"name"`
 }
 
-func (d *database) exercises(ctx context.Context) ([]exercise, error) {
+func (d *database) exercises(ctx context.Context) ([]exerciseRow, error) {
 	const query = `
 		SELECT
 			id,
@@ -636,7 +625,7 @@ func (d *database) exercises(ctx context.Context) ([]exercise, error) {
 			name ASC
 	`
 
-	var exercises []exercise
+	var exercises []exerciseRow
 
 	if err := d.db.SelectContext(ctx, &exercises, query); err != nil {
 		return nil, err
@@ -645,7 +634,7 @@ func (d *database) exercises(ctx context.Context) ([]exercise, error) {
 	return exercises, nil
 }
 
-func (d *database) setByIds(ctx context.Context, workoutID, setID int) (workoutSet, error) {
+func (d *database) setByIds(ctx context.Context, workoutID, setID int) (setRow, error) {
 	const query = `
 		SELECT
 			es.id,
@@ -665,10 +654,10 @@ func (d *database) setByIds(ctx context.Context, workoutID, setID int) (workoutS
 			es.date_utc DESC
 	`
 
-	var set workoutSet
+	var set setRow
 
 	if err := d.db.GetContext(ctx, &set, query, workoutID, setID); err != nil {
-		return workoutSet{}, err
+		return setRow{}, err
 	}
 
 	return set, nil
@@ -753,7 +742,7 @@ func (d *database) updateSet(
 	return nil
 }
 
-type setRecommendation struct {
+type setRecommendationRow struct {
 	ExerciseID  int `db:"exercise_id"`
 	Repetitions int `db:"repetitions"`
 	Weight      int `db:"weight"`
@@ -762,7 +751,7 @@ type setRecommendation struct {
 func (d *database) newSetRecommendation(
 	ctx context.Context,
 	workoutID int,
-) (setRecommendation, error) {
+) (setRecommendationRow, error) {
 	// Very simple recommendation, just recommend the last set.
 	const query = `
 		SELECT
@@ -778,7 +767,7 @@ func (d *database) newSetRecommendation(
 		LIMIT 1
 	`
 
-	var recommendation setRecommendation
+	var recommendation setRecommendationRow
 
 	if err := d.db.GetContext(ctx, &recommendation, query, workoutID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -788,7 +777,7 @@ func (d *database) newSetRecommendation(
 			recommendation.Weight = 0
 			return recommendation, nil
 		}
-		return setRecommendation{}, err
+		return setRecommendationRow{}, err
 	}
 
 	return recommendation, nil
