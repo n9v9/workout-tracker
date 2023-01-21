@@ -261,8 +261,6 @@ func (a *application) handleCreateWorkout(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	l.Info().Int("workout_id", int(id)).Msg("Created new workout.")
-
 	type response struct {
 		ID int `json:"id"`
 	}
@@ -295,8 +293,6 @@ func (a *application) handleDeleteWorkout(w http.ResponseWriter, r *http.Request
 }
 
 func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
-
 	workoutID, ok := paramInt(w, r, "workoutID")
 	if !ok {
 		return
@@ -304,9 +300,7 @@ func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Re
 
 	sets, err := a.db.setsForWorkout(r.Context(), workoutID)
 	if err != nil {
-		l.Err(err).
-			Int("workout_id", workoutID).
-			Msg("Failed to get sets for workout ID.")
+		hlog.FromRequest(r).Err(err).Msg("Failed to get sets for workout ID.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -330,8 +324,6 @@ func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Re
 }
 
 func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
-
 	workoutID, ok := paramInt(w, r, "workoutID")
 	if !ok {
 		return
@@ -344,10 +336,7 @@ func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 
 	set, err := a.db.setByIds(r.Context(), workoutID, setID)
 	if err != nil {
-		l.Err(err).
-			Int("workout_id", workoutID).
-			Int("set_id", setID).
-			Msg("Failed to get set by workout ID and set ID.")
+		hlog.FromRequest(r).Err(err).Msg("Failed to get set by workout ID and set ID.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -365,8 +354,6 @@ func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *application) handleNewSetRecommendation(w http.ResponseWriter, r *http.Request) {
-	l := hlog.FromRequest(r)
-
 	workoutID, ok := paramInt(w, r, "workoutID")
 	if !ok {
 		return
@@ -374,7 +361,7 @@ func (a *application) handleNewSetRecommendation(w http.ResponseWriter, r *http.
 
 	result, err := a.db.newSetRecommendation(r.Context(), workoutID)
 	if err != nil {
-		l.Err(err).Msg("Failed to get recommendation for new set.")
+		hlog.FromRequest(r).Err(err).Msg("Failed to get recommendation for new set.")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
@@ -409,7 +396,9 @@ func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.db.createSet(r.Context(), workoutID, b.ExerciseID, b.Repetitions, b.Weight); err != nil {
+	if err := a.db.createSet(
+		r.Context(), workoutID, b.ExerciseID, b.Repetitions, b.Weight,
+	); err != nil {
 		l.Err(err).Msg("Failed to create new set.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -439,7 +428,9 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.db.updateSet(r.Context(), workoutID, b.SetID, b.ExerciseID, b.Repetitions, b.Weight); err != nil {
+	if err := a.db.updateSet(
+		r.Context(), workoutID, b.SetID, b.ExerciseID, b.Repetitions, b.Weight,
+	); err != nil {
 		l.Err(err).Msg("Failed to update existing set.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -447,8 +438,6 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *application) handleDeleteSet(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
-
 	workoutID, ok := paramInt(w, r, "workoutID")
 	if !ok {
 		return
@@ -460,10 +449,7 @@ func (a *application) handleDeleteSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.db.deleteSet(r.Context(), workoutID, setID); err != nil {
-		l.Err(err).
-			Int("workout_id", workoutID).
-			Int("set_id", setID).
-			Msg("Failed to delete set.")
+		hlog.FromRequest(r).Err(err).Msg("Failed to delete set.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -530,12 +516,12 @@ func newDatabase(path string) *database {
 	return &database{db}
 }
 
-type WorkoutList struct {
+type workoutList struct {
 	ID                    uint64 `db:"id"`
 	StartSecondsUnixEpoch uint64 `db:"start_seconds_unix_epoch"`
 }
 
-func (d *database) workoutList(ctx context.Context) ([]WorkoutList, error) {
+func (d *database) workoutList(ctx context.Context) ([]workoutList, error) {
 	const query = `
 		SELECT
 			id,
@@ -545,7 +531,7 @@ func (d *database) workoutList(ctx context.Context) ([]WorkoutList, error) {
 		ORDER BY
 			start_date_utc DESC`
 
-	var result []WorkoutList
+	var result []workoutList
 
 	if err := d.db.SelectContext(ctx, &result, query); err != nil {
 		return nil, err
@@ -595,7 +581,7 @@ func (d *database) deleteWorkout(ctx context.Context, workoutID int) error {
 	return nil
 }
 
-type WorkoutSet struct {
+type workoutSet struct {
 	ID                   int    `db:"id"`
 	ExerciseID           int    `db:"exercise_id"`
 	ExerciseName         string `db:"exercise_name"`
@@ -604,7 +590,7 @@ type WorkoutSet struct {
 	Weight               int    `db:"weight"`
 }
 
-func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]WorkoutSet, error) {
+func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]workoutSet, error) {
 	const query = `
 		SELECT
 			es.id,
@@ -623,7 +609,7 @@ func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]Workout
 			es.date_utc DESC
 	`
 
-	var sets []WorkoutSet
+	var sets []workoutSet
 
 	if err := d.db.SelectContext(ctx, &sets, query, workoutID); err != nil {
 		return nil, err
@@ -632,12 +618,12 @@ func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]Workout
 	return sets, nil
 }
 
-type Exercise struct {
+type exercise struct {
 	ID   int    `db:"id"`
 	Name string `db:"name"`
 }
 
-func (d *database) exercises(ctx context.Context) ([]Exercise, error) {
+func (d *database) exercises(ctx context.Context) ([]exercise, error) {
 	const query = `
 		SELECT
 			id,
@@ -648,7 +634,7 @@ func (d *database) exercises(ctx context.Context) ([]Exercise, error) {
 			name ASC
 	`
 
-	var exercises []Exercise
+	var exercises []exercise
 
 	if err := d.db.SelectContext(ctx, &exercises, query); err != nil {
 		return nil, err
@@ -657,7 +643,7 @@ func (d *database) exercises(ctx context.Context) ([]Exercise, error) {
 	return exercises, nil
 }
 
-func (d *database) setByIds(ctx context.Context, workoutID, setID int) (WorkoutSet, error) {
+func (d *database) setByIds(ctx context.Context, workoutID, setID int) (workoutSet, error) {
 	const query = `
 		SELECT
 			es.id,
@@ -677,10 +663,10 @@ func (d *database) setByIds(ctx context.Context, workoutID, setID int) (WorkoutS
 			es.date_utc DESC
 	`
 
-	var set WorkoutSet
+	var set workoutSet
 
 	if err := d.db.GetContext(ctx, &set, query, workoutID, setID); err != nil {
-		return WorkoutSet{}, err
+		return workoutSet{}, err
 	}
 
 	return set, nil
@@ -727,7 +713,9 @@ func (d *database) createSet(
 		)
 	`
 
-	if _, err := d.db.ExecContext(ctx, query, exerciseID, workoutID, repetitions, weight); err != nil {
+	if _, err := d.db.ExecContext(
+		ctx, query, exerciseID, workoutID, repetitions, weight,
+	); err != nil {
 		return err
 	}
 
@@ -754,20 +742,25 @@ func (d *database) updateSet(
 			workout_id = ?
 	`
 
-	if _, err := d.db.ExecContext(ctx, query, exerciseID, repetitions, weight, setID, workoutID); err != nil {
+	if _, err := d.db.ExecContext(
+		ctx, query, exerciseID, repetitions, weight, setID, workoutID,
+	); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-type SetRecommendation struct {
+type setRecommendation struct {
 	ExerciseID  int `db:"exercise_id"`
 	Repetitions int `db:"repetitions"`
 	Weight      int `db:"weight"`
 }
 
-func (d *database) newSetRecommendation(ctx context.Context, workoutID int) (SetRecommendation, error) {
+func (d *database) newSetRecommendation(
+	ctx context.Context,
+	workoutID int,
+) (setRecommendation, error) {
 	// Very simple recommendation, just recommend the last set.
 	const query = `
 		SELECT
@@ -783,7 +776,7 @@ func (d *database) newSetRecommendation(ctx context.Context, workoutID int) (Set
 		LIMIT 1
 	`
 
-	var recommendation SetRecommendation
+	var recommendation setRecommendation
 
 	if err := d.db.GetContext(ctx, &recommendation, query, workoutID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -793,7 +786,7 @@ func (d *database) newSetRecommendation(ctx context.Context, workoutID int) (Set
 			recommendation.Weight = 0
 			return recommendation, nil
 		}
-		return SetRecommendation{}, err
+		return setRecommendation{}, err
 	}
 
 	return recommendation, nil
