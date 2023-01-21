@@ -173,6 +173,7 @@ func (a *application) routes() {
 	a.router.Mount("/api", api)
 
 	api.Get("/exercises", a.handleGetExercises)
+	api.Post("/exercises", a.handleCreateExercise)
 
 	api.Get("/workouts", a.handleGetWorkoutList)
 	api.Post("/workouts", a.handleCreateWorkout)
@@ -231,6 +232,22 @@ func (a *application) handleGetExercises(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, r, results)
+}
+
+func (a *application) handleCreateExercise(w http.ResponseWriter, r *http.Request) {
+	type body struct {
+		Name string `json:"name"`
+	}
+
+	var b body
+
+	if !readJSON(w, r, &b) {
+		return
+	}
+
+	if err := a.db.createExercise(r.Context(), b.Name); err != nil {
+		hlog.FromRequest(r).Err(err).Msg("Failed to create new exercise.")
+	}
 }
 
 func (a *application) handleGetWorkoutList(w http.ResponseWriter, r *http.Request) {
@@ -385,9 +402,7 @@ func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
 
 	var b body
 
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		l.Err(err).Msg("Failed to read JSON body.")
-		w.WriteHeader(http.StatusInternalServerError)
+	if !readJSON(w, r, &b) {
 		return
 	}
 
@@ -417,9 +432,7 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 
 	var b body
 
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
-		l.Err(err).Msg("Failed to read JSON body.")
-		w.WriteHeader(http.StatusInternalServerError)
+	if !readJSON(w, r, &b) {
 		return
 	}
 
@@ -507,6 +520,18 @@ func writeJSON(w http.ResponseWriter, r *http.Request, data any) {
 
 		return
 	}
+}
+
+// readJSON decodes the request body into data.
+// If reading fails, http.StatusBadRequest will be set and false will be returned.
+func readJSON(w http.ResponseWriter, r *http.Request, data any) bool {
+	defer r.Body.Close()
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		hlog.FromRequest(r).Warn().Err(err).Msg("Failed to decode JSON body.")
+		w.WriteHeader(http.StatusBadRequest)
+		return false
+	}
+	return true
 }
 
 type database struct {
@@ -882,4 +907,10 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	result.avgDuration = time.Duration(int(result.totalDuration) / result.totalWorkouts)
 
 	return result, nil
+}
+
+func (d *database) createExercise(ctx context.Context, name string) error {
+	const query = "INSERT INTO exercise (name) VALUES (?)"
+	_, err := d.db.ExecContext(ctx, query, name)
+	return err
 }
