@@ -778,7 +778,7 @@ func (d *database) newSetRecommendation(
 	workoutID int,
 ) (setRecommendationRow, error) {
 	// Very simple recommendation, just recommend the last set.
-	const query = `
+	const lastSetQuery = `
 		SELECT
 			exercise_id,
 			repetitions,
@@ -794,16 +794,46 @@ func (d *database) newSetRecommendation(
 
 	var recommendation setRecommendationRow
 
-	if err := d.db.GetContext(ctx, &recommendation, query, workoutID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			// Set some defaults, in case there are no sets yet.
-			recommendation.ExerciseID = -1
-			recommendation.Repetitions = 0
-			recommendation.Weight = 0
-			return recommendation, nil
-		}
+	err := d.db.GetContext(ctx, &recommendation, lastSetQuery, workoutID)
+	if err == nil {
+		return recommendation, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
 		return setRecommendationRow{}, err
 	}
+
+	// Suggest the first set of the last workout that has sets.
+	const firstSetQuery = `
+SELECT
+	exercise_id,
+	repetitions,
+	weight
+FROM
+	exercise_set
+WHERE
+	workout_id = (
+		SELECT
+			MAX(w.id)
+		FROM
+			workout w JOIN exercise_set es on w.id = es.workout_id
+	)
+ORDER BY
+	date_utc ASC
+LIMIT 1;
+    `
+
+	err = d.db.GetContext(ctx, &recommendation, firstSetQuery)
+	if err == nil {
+		return recommendation, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return setRecommendationRow{}, err
+	}
+
+	// There are no workouts with sets, so we just set some defaults.
+	recommendation.ExerciseID = -1
+	recommendation.Repetitions = 0
+	recommendation.Weight = 0
 
 	return recommendation, nil
 }
