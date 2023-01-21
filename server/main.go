@@ -163,6 +163,8 @@ func (a *application) routes() {
 	a.router.Get("/", a.handleIndex())
 	a.router.Get("/index.html", a.handleIndex())
 	a.router.Get("/assets/*", a.handleAssets())
+	// This makes SPA routing requests work, otherwise 404 would be returned.
+	a.router.Get("/*", a.handleIndex())
 
 	//
 	// API handlers
