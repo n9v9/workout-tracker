@@ -4,6 +4,7 @@
     import { api } from "../api/service";
     import { isLoading, uiDisabled } from "../store";
     import Button from "./Button.svelte";
+    import LoadingBanner from "./LoadingBanner.svelte";
     import Title from "./Title.svelte";
 
     let totalWorkouts: number;
@@ -44,30 +45,34 @@
     </Button>
 </div>
 
-<div class="block">
-    <h2 class="title is-4">Zeiten</h2>
-</div>
+{#if $isLoading}
+    <LoadingBanner />
+{:else}
+    <div class="block">
+        <h2 class="title is-4">Zeiten</h2>
+    </div>
 
-<div class="block">
-    <div class="container">
-        <div class="has-text-centered">
-            <p class="is-size-6 heading">Anzahl Workouts</p>
-            <p class="title">{totalWorkouts}</p>
-        </div>
-        <div class="has-text-centered">
-            <p class="is-size-6 heading">Gesamt Workout Zeit</p>
-            <p class="title">{totalDuration}</p>
-        </div>
-        <div class="has-text-centered">
-            <p class="is-size-6 heading">Ø Workout Zeit</p>
-            <p class="title">{avgDuration}</p>
+    <div class="block">
+        <div class="container">
+            <div class="has-text-centered">
+                <p class="is-size-6 heading">Anzahl Workouts</p>
+                <p class="title">{totalWorkouts}</p>
+            </div>
+            <div class="has-text-centered">
+                <p class="is-size-6 heading">Gesamt Workout Zeit</p>
+                <p class="title">{totalDuration}</p>
+            </div>
+            <div class="has-text-centered">
+                <p class="is-size-6 heading">Ø Workout Zeit</p>
+                <p class="title">{avgDuration}</p>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="block">
-    <h2 class="title is-4">Übungen</h2>
-</div>
+    <div class="block">
+        <h2 class="title is-4">Übungen</h2>
+    </div>
+{/if}
 
 <style>
     .container {
