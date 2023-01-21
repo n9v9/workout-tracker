@@ -89,7 +89,7 @@ func setupCLI() *cli.App {
 type application struct {
 	staticFilesDir string
 	router         chi.Router
-	db             *Database
+	db             *database
 }
 
 func newApplication(staticFilesDir, db string) *application {
@@ -127,11 +127,26 @@ func (a *application) routes() {
 	logging := alice.New(
 		hlog.NewHandler(log.Logger),
 		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
-			hlog.FromRequest(r).Info().
+			event := hlog.FromRequest(r).Info().
 				Int("size", size).
 				Int("status", status).
-				Dur("duration", duration).
-				Msg("")
+				Dur("duration", duration)
+
+			logParams := zerolog.Dict()
+			urlParams := chi.RouteContext(r.Context()).URLParams
+
+			for i, key := range urlParams.Keys {
+				// XXX: I don't know why go-chi adds this parameter when using sub routers.
+				//      Just filter this param out for now as it's value is always "".
+				if key == "*" {
+					continue
+				}
+				value := urlParams.Values[i]
+				logParams.Str(key, value)
+			}
+
+			event.Dict("url_params", logParams)
+			event.Send()
 		}),
 		hlog.MethodHandler("method"),
 		hlog.URLHandler("url"),
@@ -152,19 +167,22 @@ func (a *application) routes() {
 	//
 	// API handlers
 	//
-	a.router.Get("/api/exercises", a.handleGetExercises)
+	api := chi.NewRouter()
+	a.router.Mount("/api", api)
 
-	a.router.Get("/api/workouts", a.handleGetWorkoutList)
-	a.router.Post("/api/workouts", a.handleCreateWorkout)
-	a.router.Delete("/api/workouts/{workoutID}", a.handleDeleteWorkout)
+	api.Get("/exercises", a.handleGetExercises)
 
-	a.router.Get("/api/workouts/{workoutID}/sets", a.handleGetSetsByWorkoutId)
-	a.router.Get("/api/workouts/{workoutID}/sets/{setID}", a.handleGetSetById)
-	a.router.Post("/api/workouts/{workoutID}/sets", a.handleCreateSet)
-	a.router.Put("/api/workouts/{workoutID}/sets/{setID}", a.handleUpdateSet)
-	a.router.Delete("/api/workouts/{workoutID}/sets/{setID}", a.handleDeleteSet)
+	api.Get("/workouts", a.handleGetWorkoutList)
+	api.Post("/workouts", a.handleCreateWorkout)
+	api.Delete("/workouts/{workoutID}", a.handleDeleteWorkout)
 
-	a.router.Get("/api/workouts/{workoutID}/sets/recommendation", a.handleNewSetRecommendation)
+	api.Get("/workouts/{workoutID}/sets", a.handleGetSetsByWorkoutId)
+	api.Get("/workouts/{workoutID}/sets/{setID}", a.handleGetSetById)
+	api.Post("/workouts/{workoutID}/sets", a.handleCreateSet)
+	api.Put("/workouts/{workoutID}/sets/{setID}", a.handleUpdateSet)
+	api.Delete("/workouts/{workoutID}/sets/{setID}", a.handleDeleteSet)
+
+	api.Get("/workouts/{workoutID}/sets/recommendation", a.handleNewSetRecommendation)
 }
 
 func (a *application) handleIndex() http.HandlerFunc {
@@ -255,18 +273,14 @@ func (a *application) handleCreateWorkout(w http.ResponseWriter, r *http.Request
 }
 
 func (a *application) handleDeleteWorkout(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
+	l := hlog.FromRequest(r)
 
-	id, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to delete workout with invalid ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
 
-	l = l.With().Int("workout_id", id).Logger()
-
-	if err := a.db.deleteWorkout(r.Context(), id); err != nil {
+	if err := a.db.deleteWorkout(r.Context(), workoutID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			l.Warn().Msg("Request to delete workout with non existent ID.")
 			w.WriteHeader(http.StatusBadRequest)
@@ -283,17 +297,15 @@ func (a *application) handleDeleteWorkout(w http.ResponseWriter, r *http.Request
 func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Request) {
 	l := *hlog.FromRequest(r)
 
-	id, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get sets for workout with invalid ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
 
-	sets, err := a.db.setsForWorkout(r.Context(), id)
+	sets, err := a.db.setsForWorkout(r.Context(), workoutID)
 	if err != nil {
 		l.Err(err).
-			Int("workout_id", id).
+			Int("workout_id", workoutID).
 			Msg("Failed to get sets for workout ID.")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -320,17 +332,13 @@ func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Re
 func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 	l := *hlog.FromRequest(r)
 
-	workoutID, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
 
-	setID, err := strconv.Atoi(chi.URLParam(r, "setID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid set ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	setID, ok := paramInt(w, r, "setID")
+	if !ok {
 		return
 	}
 
@@ -357,16 +365,12 @@ func (a *application) handleGetSetById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *application) handleNewSetRecommendation(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
+	l := hlog.FromRequest(r)
 
-	workoutID, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
-
-	l = l.With().Int("workout_id", workoutID).Logger()
 
 	result, err := a.db.newSetRecommendation(r.Context(), workoutID)
 	if err != nil {
@@ -384,16 +388,12 @@ func (a *application) handleNewSetRecommendation(w http.ResponseWriter, r *http.
 }
 
 func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
+	l := hlog.FromRequest(r)
 
-	workoutID, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
-
-	l = l.With().Int("workout_id", workoutID).Logger()
 
 	type body struct {
 		ExerciseID  int `json:"exerciseId"`
@@ -417,23 +417,12 @@ func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
-	l := *hlog.FromRequest(r)
+	l := hlog.FromRequest(r)
 
-	workoutID, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
-
-	setID, err := strconv.Atoi(chi.URLParam(r, "setID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	l = l.With().Int("workout_id", workoutID).Int("set_id", setID).Logger()
 
 	type body struct {
 		SetID       int `json:"setId"`
@@ -450,8 +439,6 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l.Info().Interface("data", b).Msg("UPDATING")
-
 	if err := a.db.updateSet(r.Context(), workoutID, b.SetID, b.ExerciseID, b.Repetitions, b.Weight); err != nil {
 		l.Err(err).Msg("Failed to update existing set.")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -462,17 +449,13 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 func (a *application) handleDeleteSet(w http.ResponseWriter, r *http.Request) {
 	l := *hlog.FromRequest(r)
 
-	workoutID, err := strconv.Atoi(chi.URLParam(r, "workoutID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid workout ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	workoutID, ok := paramInt(w, r, "workoutID")
+	if !ok {
 		return
 	}
 
-	setID, err := strconv.Atoi(chi.URLParam(r, "setID"))
-	if err != nil {
-		l.Warn().Err(err).Msg("Request to get set with invalid set ID.")
-		w.WriteHeader(http.StatusBadRequest)
+	setID, ok := paramInt(w, r, "setID")
+	if !ok {
 		return
 	}
 
@@ -488,6 +471,25 @@ func (a *application) handleDeleteSet(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// paramInt tries to parse the URL parameter with the given name as an integer.
+// If parsing fails, http.StatusBadRequest will be set.
+func paramInt(w http.ResponseWriter, r *http.Request, name string) (int, bool) {
+	v, err := strconv.Atoi(chi.URLParam(r, name))
+	if err != nil {
+		hlog.FromRequest(r).
+			Warn().
+			Err(err).
+			Str("param_name", name).
+			Msg("Failed to parse URL parameter.")
+
+		w.WriteHeader(http.StatusBadRequest)
+		return 0, false
+	}
+	return v, true
+}
+
+// writeJSON encodes data as JSON and writes it to w.
+// If writing fails, http.StatusInternalServerError will be set.
 func writeJSON(w http.ResponseWriter, r *http.Request, data any) {
 	w.Header().Add("Content-Type", "application/json")
 
@@ -503,11 +505,11 @@ func writeJSON(w http.ResponseWriter, r *http.Request, data any) {
 	}
 }
 
-type Database struct {
+type database struct {
 	db *sqlx.DB
 }
 
-func newDatabase(path string) *Database {
+func newDatabase(path string) *database {
 	db, err := sqlx.Open("sqlite", path)
 	if err != nil {
 		log.Err(err).
@@ -525,7 +527,7 @@ func newDatabase(path string) *Database {
 		os.Exit(1)
 	}
 
-	return &Database{db}
+	return &database{db}
 }
 
 type WorkoutList struct {
@@ -533,7 +535,7 @@ type WorkoutList struct {
 	StartSecondsUnixEpoch uint64 `db:"start_seconds_unix_epoch"`
 }
 
-func (d *Database) workoutList(ctx context.Context) ([]WorkoutList, error) {
+func (d *database) workoutList(ctx context.Context) ([]WorkoutList, error) {
 	const query = `
 		SELECT
 			id,
@@ -554,7 +556,7 @@ func (d *Database) workoutList(ctx context.Context) ([]WorkoutList, error) {
 
 type CreateWorkoutID int
 
-func (d *Database) createWorkout(ctx context.Context) (CreateWorkoutID, error) {
+func (d *database) createWorkout(ctx context.Context) (CreateWorkoutID, error) {
 	const query = `
 		INSERT INTO workout (start_date_utc)
 		VALUES (DATETIME('now'))
@@ -573,7 +575,7 @@ func (d *Database) createWorkout(ctx context.Context) (CreateWorkoutID, error) {
 	return CreateWorkoutID(id), nil
 }
 
-func (d *Database) deleteWorkout(ctx context.Context, workoutID int) error {
+func (d *database) deleteWorkout(ctx context.Context, workoutID int) error {
 	const query = "DELETE FROM workout WHERE id = ?"
 
 	result, err := d.db.ExecContext(ctx, query, workoutID)
@@ -602,7 +604,7 @@ type WorkoutSet struct {
 	Weight               int    `db:"weight"`
 }
 
-func (d *Database) setsForWorkout(ctx context.Context, workoutID int) ([]WorkoutSet, error) {
+func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]WorkoutSet, error) {
 	const query = `
 		SELECT
 			es.id,
@@ -635,7 +637,7 @@ type Exercise struct {
 	Name string `db:"name"`
 }
 
-func (d *Database) exercises(ctx context.Context) ([]Exercise, error) {
+func (d *database) exercises(ctx context.Context) ([]Exercise, error) {
 	const query = `
 		SELECT
 			id,
@@ -655,7 +657,7 @@ func (d *Database) exercises(ctx context.Context) ([]Exercise, error) {
 	return exercises, nil
 }
 
-func (d *Database) setByIds(ctx context.Context, workoutID, setID int) (WorkoutSet, error) {
+func (d *database) setByIds(ctx context.Context, workoutID, setID int) (WorkoutSet, error) {
 	const query = `
 		SELECT
 			es.id,
@@ -684,7 +686,7 @@ func (d *Database) setByIds(ctx context.Context, workoutID, setID int) (WorkoutS
 	return set, nil
 }
 
-func (d *Database) deleteSet(ctx context.Context, workoutID, setID int) error {
+func (d *database) deleteSet(ctx context.Context, workoutID, setID int) error {
 	const query = `
 		DELETE
 		FROM
@@ -701,7 +703,7 @@ func (d *Database) deleteSet(ctx context.Context, workoutID, setID int) error {
 	return nil
 }
 
-func (d *Database) createSet(
+func (d *database) createSet(
 	ctx context.Context,
 	workoutID,
 	exerciseID,
@@ -732,7 +734,7 @@ func (d *Database) createSet(
 	return nil
 }
 
-func (d *Database) updateSet(
+func (d *database) updateSet(
 	ctx context.Context,
 	workoutID,
 	setID,
@@ -765,7 +767,7 @@ type SetRecommendation struct {
 	Weight      int `db:"weight"`
 }
 
-func (d *Database) newSetRecommendation(ctx context.Context, workoutID int) (SetRecommendation, error) {
+func (d *database) newSetRecommendation(ctx context.Context, workoutID int) (SetRecommendation, error) {
 	// Very simple recommendation, just recommend the last set.
 	const query = `
 		SELECT
