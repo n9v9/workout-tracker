@@ -1,5 +1,5 @@
 import { apiErrorMessage } from "../store";
-import type { EditSet, Exercise, Set, Workout } from "./types";
+import type { EditSet, Exercise, Set, Statistics, Workout } from "./types";
 
 type SetEntity = {
     id: number;
@@ -108,6 +108,10 @@ class ApiService {
 
     async getNewSetRecommendation(workoutId: number): Promise<Set> {
         return await this.getJson<Set>(`workouts/${workoutId}/sets/recommendation`);
+    }
+
+    async getStatistics(): Promise<Statistics> {
+        return await this.getJson<Statistics>("statistics");
     }
 
     private async getJson<T>(

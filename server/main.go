@@ -185,6 +185,8 @@ func (a *application) routes() {
 	api.Delete("/workouts/{workoutID}/sets/{setID}", a.handleDeleteSet)
 
 	api.Get("/workouts/{workoutID}/sets/recommendation", a.handleNewSetRecommendation)
+
+	api.Get("/statistics", a.handleStatistics)
 }
 
 func (a *application) handleIndex() http.HandlerFunc {
@@ -448,6 +450,29 @@ func (a *application) handleDeleteSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (a *application) handleStatistics(w http.ResponseWriter, r *http.Request) {
+	statistics, err := a.db.statistics(r.Context())
+	if err != nil {
+		hlog.FromRequest(r).Err(err).Msg("Failed to get statistics.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		TotalWorkouts        int   `json:"totalWorkouts"`
+		TotalDurationSeconds int64 `json:"totalDurationSeconds"`
+		AvgDurationSeconds   int64 `json:"avgDurationSeconds"`
+	}
+
+	resp := response{
+		TotalWorkouts:        statistics.totalWorkouts,
+		TotalDurationSeconds: int64(statistics.totalDuration.Seconds()),
+		AvgDurationSeconds:   int64(statistics.avgDuration.Seconds()),
+	}
+
+	writeJSON(w, r, resp)
 }
 
 // paramInt tries to parse the URL parameter with the given name as an integer.
@@ -781,4 +806,50 @@ func (d *database) newSetRecommendation(
 	}
 
 	return recommendation, nil
+}
+
+type statisticsRow struct {
+	totalWorkouts int
+	totalDuration time.Duration
+	avgDuration   time.Duration
+}
+
+func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
+	const query = `
+		SELECT
+			UNIXEPOCH(w.start_date_utc) AS start_date_utc,
+			UNIXEPOCH(MAX(es.date_utc)) AS end_date_utc
+		FROM
+			exercise_set es
+		JOIN
+			workout w on es.workout_id = w.id
+		GROUP BY
+			w.id;
+	`
+
+	type row struct {
+		StartUTC int64 `db:"start_date_utc"`
+		EndUTC   int64 `db:"end_date_utc"`
+	}
+
+	var workouts []row
+
+	if err := d.db.SelectContext(ctx, &workouts, query); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return statisticsRow{}, nil
+		}
+		return statisticsRow{}, err
+	}
+
+	result := statisticsRow{
+		totalWorkouts: len(workouts),
+	}
+
+	for _, v := range workouts {
+		result.totalDuration += time.Unix(v.EndUTC, 0).Sub(time.Unix(v.StartUTC, 0))
+	}
+
+	result.avgDuration = time.Duration(int(result.totalDuration) / result.totalWorkouts)
+
+	return result, nil
 }

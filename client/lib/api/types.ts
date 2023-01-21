@@ -23,3 +23,9 @@ export type EditSet = {
     repetitions: number;
     weight: number;
 };
+
+export type Statistics = {
+    totalWorkouts: number;
+    totalDurationSeconds: number;
+    avgDurationSeconds: number;
+};
