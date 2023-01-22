@@ -24,6 +24,9 @@
     let canSave = false;
     let showDeleteModal = false;
     let showAddExerciseModal = false;
+    let showDeleteExerciseModal = false;
+    let showCannotDeleteExerciseModal = false;
+    let exerciseInSetsCount = 0;
 
     let canSaveNewExercise = false;
     let exerciseExists = false;
@@ -33,13 +36,20 @@
 
     function resetVariables() {
         exercises = [];
+
         inputExerciseId = undefined;
-        inputRepetitions = "";
-        inputWeight = "";
+        inputRepetitions = undefined;
+        inputWeight = undefined;
+
+        inputExerciseName = "";
+
         canSave = false;
         showDeleteModal = false;
         showAddExerciseModal = false;
-        inputExerciseName = "";
+        showDeleteExerciseModal = false;
+        showCannotDeleteExerciseModal = false;
+        exerciseInSetsCount = 0;
+
         canSaveNewExercise = false;
         exerciseExists = false;
         existingExercises = [];
@@ -171,6 +181,39 @@
             await createExercise();
         }
     }
+
+    async function openDeleteExerciseModal() {
+        $uiDisabled = true;
+        $isLoading = true;
+
+        try {
+            const result = await api.getExerciseCountInSets(inputExerciseId);
+
+            if (result.count > 0) {
+                showCannotDeleteExerciseModal = true;
+                exerciseInSetsCount = result.count;
+                return;
+            }
+
+            showDeleteExerciseModal = true;
+        } finally {
+            $uiDisabled = false;
+            $isLoading = false;
+        }
+    }
+
+    async function deleteExercise() {
+        $uiDisabled = true;
+        $isLoading = true;
+
+        try {
+            await api.deleteExercise(inputExerciseId);
+            await load();
+        } finally {
+            $uiDisabled = false;
+            $isLoading = false;
+        }
+    }
 </script>
 
 <Title text={setId === null ? "Neuer Satz" : "Satz Bearbeiten"} />
@@ -196,7 +239,7 @@
                     </div>
                     <p class="control">
                         <Button
-                            classes="button has-background-link-light"
+                            classes="button"
                             click={() => {
                                 showAddExerciseModal = true;
                                 // XXX: Without `setTimeout`, the element would still be undefined
@@ -205,7 +248,14 @@
                                 setTimeout(() => inputExerciseNameElement.focus(), 0);
                             }}>
                             <span class="icon">
-                                <i class="bi bi-plus" />
+                                <i class="bi bi-plus-lg" />
+                            </span>
+                        </Button>
+                    </p>
+                    <p class="control">
+                        <Button classes="button" click={openDeleteExerciseModal}>
+                            <span class="icon has-text-danger">
+                                <i class="bi bi-trash3" />
                             </span>
                         </Button>
                     </p>
@@ -243,7 +293,7 @@
             type="number"
             id="weight"
             class="input"
-            enterkeyhint="go"
+            enterkeyhint="send"
             bind:value={inputWeight}
             bind:this={inputWeightElement}
             on:focus={selectText}
@@ -294,7 +344,11 @@
         confirmText="Speichern"
         confirm={createExercise}
         canConfirm={canSaveNewExercise}
-        cancel={() => (showAddExerciseModal = false)}>
+        cancel={() => {
+            showAddExerciseModal = false;
+            inputExerciseName = "";
+            exerciseExists = false;
+        }}>
         <div class="field">
             <label for="new-exercise-name" class="label">Name der Übung</label>
             <div class="field">
@@ -306,12 +360,33 @@
                         bind:this={inputExerciseNameElement}
                         bind:value={inputExerciseName}
                         on:keyup={onNewExerciseKeyUp}
-                        placeholder="z. B. Squats" />
+                        placeholder="z. B. Squats"
+                        enterkeyhint="send" />
                 </div>
                 <p class="{!exerciseExists ? 'is-hidden' : ''} help is-danger"
                     >Diese Übung existiert bereits.</p>
             </div>
         </div>
+    </Modal>
+{:else if showDeleteExerciseModal}
+    <Modal
+        title="Übung Löschen"
+        confirmText="Löschen"
+        confirm={deleteExercise}
+        cancel={() => (showDeleteExerciseModal = false)}>
+        <p
+            >Soll die Übung "{exercises.find(x => x.id === inputExerciseId).name}" wirklich gelöscht
+            werden?</p>
+    </Modal>
+{:else if showCannotDeleteExerciseModal}
+    <Modal
+        title="Übung Löschen"
+        confirmText="OK"
+        confirm={() => (showCannotDeleteExerciseModal = false)}
+        cancel={() => (showCannotDeleteExerciseModal = false)}>
+        <p
+            >Die Übung "{exercises.find(x => x.id === inputExerciseId).name}" kann nicht gelöscht
+            werden, da sie in {exerciseInSetsCount} Sätzen enthalten ist.</p>
     </Modal>
 {/if}
 

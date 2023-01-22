@@ -75,7 +75,7 @@
 <div class="block">
     <Button classes="button is-fullwidth is-primary" click={createWorkout}>
         <span class="icon">
-            <i class="bi bi-plus" />
+            <i class="bi bi-plus-lg" />
         </span>
         <span>Neues Workout</span>
     </Button>

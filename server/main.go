@@ -174,6 +174,8 @@ func (a *application) routes() {
 
 	api.Get("/exercises", a.handleGetExercises)
 	api.Post("/exercises", a.handleCreateExercise)
+	api.Delete("/exercises/{id}", a.handleDeleteExercise)
+	api.Get("/exercises/{id}/count", a.handleGetExerciseCountInSets)
 	api.Post("/exercises/exists", a.handleExistsExercise)
 
 	api.Get("/workouts", a.handleGetWorkoutList)
@@ -248,7 +250,7 @@ func (a *application) handleCreateExercise(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	exists, err := a.db.existsExercise(r.Context(), b.Name)
+	exists, err := a.db.existsExerciseName(r.Context(), b.Name)
 	if err != nil {
 		l.Err(err).Msg("Failed to check if exercise exists.")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -286,7 +288,7 @@ func (a *application) handleExistsExercise(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	exists, err := a.db.existsExercise(r.Context(), b.Name)
+	exists, err := a.db.existsExerciseName(r.Context(), b.Name)
 	if err != nil {
 		hlog.FromRequest(r).Err(err).Msg("Failed to query if exercise exists.")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -298,6 +300,72 @@ func (a *application) handleExistsExercise(w http.ResponseWriter, r *http.Reques
 	}
 
 	writeJSON(w, r, response{Exists: exists})
+}
+
+func (a *application) handleDeleteExercise(w http.ResponseWriter, r *http.Request) {
+	id, ok := paramInt(w, r, "id")
+	if !ok {
+		return
+	}
+
+	l := hlog.FromRequest(r)
+
+	exists, err := a.db.existsExerciseID(r.Context(), id)
+	if err != nil {
+		l.Err(err).Msg("Failed to check if exercise with given ID exists.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		l.Warn().Msg("Invalid request tries to delete exercise that does not exist.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := a.db.deleteExercise(r.Context(), id); err != nil {
+		if errors.Is(err, exerciseExistsErr) {
+			l.Warn().Err(err).Msg("Invalid request tries to delete exercise that is used in sets.")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		l.Err(err).Msg("Failed to delete exercise with given ID.")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *application) handleGetExerciseCountInSets(w http.ResponseWriter, r *http.Request) {
+	id, ok := paramInt(w, r, "id")
+	if !ok {
+		return
+	}
+
+	l := hlog.FromRequest(r)
+
+	exists, err := a.db.existsExerciseID(r.Context(), id)
+	if err != nil {
+		l.Err(err).Msg("Failed to check if exercise with given ID exists.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		l.Warn().Msg("Invalid request tries to get count in sets for exercise that does not exist.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	count, err := a.db.exerciseCountInSets(r.Context(), id)
+	if err != nil {
+		l.Err(err).Msg("Failed to get count of exercise with given ID in sets.")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	type response struct {
+		Count int64 `json:"count"`
+	}
+
+	writeJSON(w, r, response{Count: count})
 }
 
 func (a *application) handleGetWorkoutList(w http.ResponseWriter, r *http.Request) {
@@ -975,7 +1043,7 @@ func (d *database) createExercise(ctx context.Context, name string) (exerciseRow
 	return exerciseRow{ID: id, Name: name}, nil
 }
 
-func (d *database) existsExercise(ctx context.Context, name string) (bool, error) {
+func (d *database) existsExerciseName(ctx context.Context, name string) (bool, error) {
 	const query = "SELECT 1 FROM exercise WHERE lower(name) = lower(?)"
 
 	// Don't care about this value, just care about the existence.
@@ -992,4 +1060,75 @@ func (d *database) existsExercise(ctx context.Context, name string) (bool, error
 	}
 
 	return false, err
+}
+
+func (d *database) existsExerciseID(ctx context.Context, id int) (bool, error) {
+	const query = "SELECT 1 FROM exercise WHERE id = ?"
+
+	// Don't care about this value, just care about the existence.
+	var tmp string
+
+	err := d.db.QueryRowxContext(ctx, query, id).Scan(&tmp)
+
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+
+	return false, err
+}
+
+var exerciseExistsErr = errors.New("exercise exists in at least one set")
+
+// deleteExercise tries to delete the exercise with the given id.
+// If the exercise is used in any sets, exerciseExistsErr will be returned.
+func (d *database) deleteExercise(ctx context.Context, id int) error {
+	const checkQuery = `
+		SELECT
+			COUNT(*)
+		FROM
+			exercise e
+		JOIN
+			exercise_set es ON e.id = es.exercise_id
+		WHERE e.id = ?;
+    `
+
+	var count int64
+	err := d.db.GetContext(ctx, &count, checkQuery, id)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return exerciseExistsErr
+	}
+
+	const deleteQuery = "DELETE FROM exercise WHERE id = ?"
+	_, err = d.db.ExecContext(ctx, deleteQuery, id)
+	return err
+}
+
+// exerciseCountInSets returns the number of times the exercise with
+// the given id is used in sets.
+func (d *database) exerciseCountInSets(ctx context.Context, id int) (int64, error) {
+	const checkQuery = `
+		SELECT
+			COUNT(*)
+		FROM
+			exercise e
+		JOIN
+			exercise_set es ON e.id = es.exercise_id
+		WHERE e.id = ?;
+    `
+
+	var count int64
+
+	err := d.db.GetContext(ctx, &count, checkQuery, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

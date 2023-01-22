@@ -33,3 +33,7 @@ export type Statistics = {
 export type ExerciseExists = {
     exists: boolean;
 };
+
+export type ExerciseCountInSets = {
+    count: number;
+};
