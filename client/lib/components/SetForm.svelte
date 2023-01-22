@@ -12,17 +12,45 @@
     export let setId: number | null = null;
 
     let exercises: Exercise[] = [];
-    let exerciseId: number;
-    let repetitions: string;
-    let weight: string;
+
+    let inputExerciseId: number;
+    let inputRepetitions: string;
+    let inputWeight: string;
+
+    let inputWeightElement: HTMLInputElement;
+    let inputExerciseNameElement: HTMLInputElement;
+    let inputExerciseName = "";
+
     let canSave = false;
     let showDeleteModal = false;
+    let showAddExerciseModal = false;
 
-    let inputWeight: HTMLInputElement;
+    let canSaveNewExercise = false;
+    let exerciseExists = false;
+    let existingExercises: string[] = [];
 
-    onMount(async () => {
+    onMount(load);
+
+    function resetVariables() {
+        exercises = [];
+        inputExerciseId = undefined;
+        inputRepetitions = "";
+        inputWeight = "";
+        canSave = false;
+        showDeleteModal = false;
+        showAddExerciseModal = false;
+        inputExerciseName = "";
+        canSaveNewExercise = false;
+        exerciseExists = false;
+        existingExercises = [];
+    }
+
+    async function load() {
+        resetVariables();
+
         $uiDisabled = true;
         $isLoading = true;
+
         try {
             const result = await Promise.all([
                 api.getExercises(),
@@ -33,23 +61,23 @@
             const set = result[1];
 
             exercises = result[0];
-            exerciseId = set.exerciseId;
-            repetitions = set.repetitions.toString();
-            weight = set.weight.toString();
+            inputExerciseId = set.exerciseId;
+            inputRepetitions = set.repetitions.toString();
+            inputWeight = set.weight.toString();
 
             checkCanSave();
         } finally {
             $uiDisabled = false;
             $isLoading = false;
         }
-    });
+    }
 
     function checkCanSave() {
         canSave =
-            repetitions !== "" &&
-            weight !== "" &&
-            parseInt(repetitions) > 0 &&
-            parseInt(weight) >= 0;
+            inputRepetitions !== "" &&
+            inputWeight !== "" &&
+            parseInt(inputRepetitions) > 0 &&
+            parseInt(inputWeight) >= 0;
     }
 
     async function save() {
@@ -58,9 +86,9 @@
         try {
             await api.createOrUpdateSet(workoutId, {
                 setId: setId,
-                exerciseId: exerciseId,
-                repetitions: parseInt(repetitions),
-                weight: parseInt(weight),
+                exerciseId: inputExerciseId,
+                repetitions: parseInt(inputRepetitions),
+                weight: parseInt(inputWeight),
             });
             goBack();
         } finally {
@@ -89,18 +117,101 @@
         const input = e.target as HTMLInputElement;
         input.select();
     }
+
+    async function createExercise() {
+        const name = inputExerciseName.trim();
+        const lowerName = name.toLowerCase();
+
+        $uiDisabled = true;
+        $isLoading = true;
+
+        try {
+            exerciseExists = (await api.existsExercise(lowerName)).exists;
+
+            if (exerciseExists) {
+                existingExercises.push(lowerName);
+                canSaveNewExercise = false;
+                return;
+            }
+        } finally {
+            $uiDisabled = false;
+            $isLoading = false;
+        }
+
+        $uiDisabled = true;
+        $isLoading = true;
+
+        try {
+            const { id } = await api.createExercise(name);
+            showAddExerciseModal = false;
+
+            // Reload this component, then set the exercise ID to the ID
+            // of the newly created exercise.
+            await load();
+            inputExerciseId = id;
+        } finally {
+            $uiDisabled = false;
+            $isLoading = false;
+        }
+    }
+
+    async function onNewExerciseKeyUp(event: KeyboardEvent) {
+        const lowerName = inputExerciseName.trim().toLowerCase();
+
+        if (existingExercises.includes(lowerName)) {
+            exerciseExists = true;
+            canSaveNewExercise = false;
+            return;
+        }
+
+        exerciseExists = false;
+        canSaveNewExercise = lowerName !== "";
+
+        if (event.key === "Enter" && canSaveNewExercise) {
+            await createExercise();
+        }
+    }
 </script>
 
 <Title text={setId === null ? "Neuer Satz" : "Satz Bearbeiten"} />
 
 <div class="field">
     <label for="exercise" class="label">Übung</label>
-    <div class="select is-fullwidth">
-        <select id="exercise" bind:value={exerciseId} disabled={$uiDisabled}>
-            {#each exercises as exercise}
-                <option value={exercise.id}>{exercise.name}</option>
-            {/each}
-        </select>
+
+    <div class="field is-horizontal">
+        <div class="field-body">
+            <div class="field is-expanded">
+                <div class="field has-addons">
+                    <div class="control is-expanded">
+                        <div class="select is-fullwidth">
+                            <select
+                                id="exercise"
+                                bind:value={inputExerciseId}
+                                disabled={$uiDisabled}>
+                                {#each exercises as exercise}
+                                    <option value={exercise.id}>{exercise.name}</option>
+                                {/each}
+                            </select>
+                        </div>
+                    </div>
+                    <p class="control">
+                        <Button
+                            classes="button has-background-link-light"
+                            click={() => {
+                                showAddExerciseModal = true;
+                                // XXX: Without `setTimeout`, the element would still be undefined
+                                //      because it is only rendered when `showAddExerciseModal` is
+                                //      true. So we just queue it here to make it work.
+                                setTimeout(() => inputExerciseNameElement.focus(), 0);
+                            }}>
+                            <span class="icon">
+                                <i class="bi bi-plus" />
+                            </span>
+                        </Button>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -112,11 +223,11 @@
             id="repetitions"
             class="input"
             enterkeyhint="next"
-            bind:value={repetitions}
+            bind:value={inputRepetitions}
             on:focus={selectText}
             on:keyup={e => {
                 if (e.key == "Enter") {
-                    inputWeight.focus();
+                    inputWeightElement.focus();
                 } else {
                     checkCanSave();
                 }
@@ -133,19 +244,17 @@
             id="weight"
             class="input"
             enterkeyhint="go"
-            bind:value={weight}
-            bind:this={inputWeight}
+            bind:value={inputWeight}
+            bind:this={inputWeightElement}
             on:focus={selectText}
             on:keyup={e => {
                 if (e.key === "Enter") {
-                    inputWeight.blur();
+                    inputWeightElement.blur();
                     if (canSave) {
                         save();
                     }
                 }
-                {
-                    checkCanSave();
-                }
+                checkCanSave();
             }}
             disabled={$uiDisabled} />
     </div>
@@ -174,9 +283,36 @@
 {#if showDeleteModal}
     <Modal
         title="Satz Löschen"
-        text="Satz wirklich löschen?"
+        confirmText="Löschen"
         confirm={deleteSet}
-        cancel={() => (showDeleteModal = false)} />
+        cancel={() => (showDeleteModal = false)}>
+        Satz wirklich löschen?
+    </Modal>
+{:else if showAddExerciseModal}
+    <Modal
+        title="Übung erstellen"
+        confirmText="Speichern"
+        confirm={createExercise}
+        canConfirm={canSaveNewExercise}
+        cancel={() => (showAddExerciseModal = false)}>
+        <div class="field">
+            <label for="new-exercise-name" class="label">Name der Übung</label>
+            <div class="field">
+                <div class="control">
+                    <input
+                        id="new-exercise-name"
+                        class="input"
+                        type="text"
+                        bind:this={inputExerciseNameElement}
+                        bind:value={inputExerciseName}
+                        on:keyup={onNewExerciseKeyUp}
+                        placeholder="z. B. Squats" />
+                </div>
+                <p class="{!exerciseExists ? 'is-hidden' : ''} help is-danger"
+                    >Diese Übung existiert bereits.</p>
+            </div>
+        </div>
+    </Modal>
 {/if}
 
 <style>

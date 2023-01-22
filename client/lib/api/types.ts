@@ -29,3 +29,7 @@ export type Statistics = {
     totalDurationSeconds: number;
     avgDurationSeconds: number;
 };
+
+export type ExerciseExists = {
+    exists: boolean;
+};

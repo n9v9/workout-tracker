@@ -111,9 +111,11 @@
 {#if showDeleteModal}
     <Modal
         title="Workout Löschen"
-        text={`Workout vom ${formatDate(selectedWorkout.started)} wirklich löschen?`}
+        confirmText="Löschen"
         confirm={() => deleteWorkout()}
-        cancel={() => (showDeleteModal = false)} />
+        cancel={() => (showDeleteModal = false)}>
+        {`Workout vom ${formatDate(selectedWorkout.started)} wirklich löschen?`}
+    </Modal>
 {/if}
 
 <style>

@@ -1,5 +1,5 @@
 import { apiErrorMessage } from "../store";
-import type { EditSet, Exercise, Set, Statistics, Workout } from "./types";
+import type { EditSet, Exercise, ExerciseExists, Set, Statistics, Workout } from "./types";
 
 type SetEntity = {
     id: number;
@@ -112,6 +112,20 @@ class ApiService {
 
     async getStatistics(): Promise<Statistics> {
         return await this.getJson<Statistics>("statistics");
+    }
+
+    async existsExercise(name: string): Promise<ExerciseExists> {
+        return await this.getJson<ExerciseExists>("exercises/exists", {
+            method: "POST",
+            body: JSON.stringify({ name }),
+        });
+    }
+
+    async createExercise(name: string): Promise<Exercise> {
+        return await this.getJson<Exercise>("exercises", {
+            method: "POST",
+            body: JSON.stringify({ name }),
+        });
     }
 
     private async getJson<T>(

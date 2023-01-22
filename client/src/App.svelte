@@ -7,7 +7,7 @@
     import Statistics from "../lib/components/Statistics.svelte";
 </script>
 
-<progress class="progress is-small mb-0 hidden {!$isLoading ? 'is-invisible' : ''}" />
+<progress class="progress is-small mb-0 {!$isLoading ? 'is-invisible' : ''}" />
 
 <main class="container px-3 pt-3">
     {#if $apiErrorMessage !== ""}

@@ -174,6 +174,7 @@ func (a *application) routes() {
 
 	api.Get("/exercises", a.handleGetExercises)
 	api.Post("/exercises", a.handleCreateExercise)
+	api.Post("/exercises/exists", a.handleExistsExercise)
 
 	api.Get("/workouts", a.handleGetWorkoutList)
 	api.Post("/workouts", a.handleCreateWorkout)
@@ -221,7 +222,7 @@ func (a *application) handleGetExercises(w http.ResponseWriter, r *http.Request)
 	}
 
 	type response struct {
-		ID   int    `json:"id"`
+		ID   int64  `json:"id"`
 		Name string `json:"name"`
 	}
 
@@ -235,6 +236,8 @@ func (a *application) handleGetExercises(w http.ResponseWriter, r *http.Request)
 }
 
 func (a *application) handleCreateExercise(w http.ResponseWriter, r *http.Request) {
+	l := hlog.FromRequest(r)
+
 	type body struct {
 		Name string `json:"name"`
 	}
@@ -245,9 +248,56 @@ func (a *application) handleCreateExercise(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := a.db.createExercise(r.Context(), b.Name); err != nil {
-		hlog.FromRequest(r).Err(err).Msg("Failed to create new exercise.")
+	exists, err := a.db.existsExercise(r.Context(), b.Name)
+	if err != nil {
+		l.Err(err).Msg("Failed to check if exercise exists.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	if exists {
+		l.Warn().Msg("Invalid request tries to create existing exercise.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	exercise, err := a.db.createExercise(r.Context(), b.Name)
+	if err != nil {
+		l.Err(err).Msg("Failed to create new exercise.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	}
+
+	writeJSON(w, r, response(exercise))
+}
+
+func (a *application) handleExistsExercise(w http.ResponseWriter, r *http.Request) {
+	type body struct {
+		Name string `json:"name"`
+	}
+
+	var b body
+
+	if !readJSON(w, r, &b) {
+		return
+	}
+
+	exists, err := a.db.existsExercise(r.Context(), b.Name)
+	if err != nil {
+		hlog.FromRequest(r).Err(err).Msg("Failed to query if exercise exists.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		Exists bool `json:"exists"`
+	}
+
+	writeJSON(w, r, response{Exists: exists})
 }
 
 func (a *application) handleGetWorkoutList(w http.ResponseWriter, r *http.Request) {
@@ -660,7 +710,7 @@ func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]setRow,
 }
 
 type exerciseRow struct {
-	ID   int    `db:"id"`
+	ID   int64  `db:"id"`
 	Name string `db:"name"`
 }
 
@@ -909,8 +959,37 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	return result, nil
 }
 
-func (d *database) createExercise(ctx context.Context, name string) error {
+func (d *database) createExercise(ctx context.Context, name string) (exerciseRow, error) {
 	const query = "INSERT INTO exercise (name) VALUES (?)"
-	_, err := d.db.ExecContext(ctx, query, name)
-	return err
+
+	result, err := d.db.ExecContext(ctx, query, name)
+	if err != nil {
+		return exerciseRow{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return exerciseRow{}, err
+	}
+
+	return exerciseRow{ID: id, Name: name}, nil
+}
+
+func (d *database) existsExercise(ctx context.Context, name string) (bool, error) {
+	const query = "SELECT 1 FROM exercise WHERE lower(name) = lower(?)"
+
+	// Don't care about this value, just care about the existence.
+	var tmp string
+
+	err := d.db.QueryRowxContext(ctx, query, name).Scan(&tmp)
+
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+
+	return false, err
 }
