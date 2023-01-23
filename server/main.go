@@ -690,7 +690,8 @@ func (d *database) workoutList(ctx context.Context) ([]workoutRow, error) {
 		FROM
 			workout
 		ORDER BY
-			start_date_utc DESC`
+			start_date_utc DESC
+	`
 
 	var result []workoutRow
 
@@ -963,7 +964,7 @@ WHERE
 ORDER BY
 	date_utc ASC
 LIMIT 1;
-    `
+	`
 
 	err = d.db.GetContext(ctx, &recommendation, firstSetQuery)
 	if err == nil {
@@ -1094,7 +1095,7 @@ func (d *database) deleteExercise(ctx context.Context, id int) error {
 		JOIN
 			exercise_set es ON e.id = es.exercise_id
 		WHERE e.id = ?;
-    `
+	`
 
 	var count int64
 	err := d.db.GetContext(ctx, &count, checkQuery, id)
@@ -1121,7 +1122,7 @@ func (d *database) exerciseCountInSets(ctx context.Context, id int) (int64, erro
 		JOIN
 			exercise_set es ON e.id = es.exercise_id
 		WHERE e.id = ?;
-    `
+	`
 
 	var count int64
 
