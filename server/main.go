@@ -592,15 +592,21 @@ func (a *application) handleStatistics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type response struct {
-		TotalWorkouts        int   `json:"totalWorkouts"`
+		TotalWorkouts        int64 `json:"totalWorkouts"`
 		TotalDurationSeconds int64 `json:"totalDurationSeconds"`
 		AvgDurationSeconds   int64 `json:"avgDurationSeconds"`
+		TotalSets            int64 `json:"totalSets"`
+		TotalReps            int64 `json:"totalReps"`
+		AvgRepsPerSet        int64 `json:"avgRepsPerSet"`
 	}
 
 	resp := response{
 		TotalWorkouts:        statistics.totalWorkouts,
 		TotalDurationSeconds: int64(statistics.totalDuration.Seconds()),
 		AvgDurationSeconds:   int64(statistics.avgDuration.Seconds()),
+		TotalSets:            statistics.totalSets,
+		TotalReps:            statistics.totalReps,
+		AvgRepsPerSet:        statistics.avgRepsPerSet,
 	}
 
 	writeJSON(w, r, resp)
@@ -983,13 +989,16 @@ LIMIT 1;
 }
 
 type statisticsRow struct {
-	totalWorkouts int
+	totalWorkouts int64
 	totalDuration time.Duration
 	avgDuration   time.Duration
+	totalReps     int64
+	totalSets     int64
+	avgRepsPerSet int64
 }
 
 func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
-	const query = `
+	const datesQuery = `
 		SELECT
 			UNIXEPOCH(w.start_date_utc) AS start_date_utc,
 			UNIXEPOCH(MAX(es.date_utc)) AS end_date_utc
@@ -1001,14 +1010,14 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 			w.id;
 	`
 
-	type row struct {
+	type datesRow struct {
 		StartUTC int64 `db:"start_date_utc"`
 		EndUTC   int64 `db:"end_date_utc"`
 	}
 
-	var workouts []row
+	var workouts []datesRow
 
-	if err := d.db.SelectContext(ctx, &workouts, query); err != nil {
+	if err := d.db.SelectContext(ctx, &workouts, datesQuery); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return statisticsRow{}, nil
 		}
@@ -1016,14 +1025,39 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	}
 
 	result := statisticsRow{
-		totalWorkouts: len(workouts),
+		totalWorkouts: int64(len(workouts)),
 	}
 
 	for _, v := range workouts {
 		result.totalDuration += time.Unix(v.EndUTC, 0).Sub(time.Unix(v.StartUTC, 0))
 	}
 
-	result.avgDuration = time.Duration(int(result.totalDuration) / result.totalWorkouts)
+	result.avgDuration = time.Duration(int64(result.totalDuration) / result.totalWorkouts)
+
+	const setsRepsQuery = `
+		SELECT
+			COUNT(id) AS total_sets,
+			SUM(repetitions) AS total_reps,
+			SUM(repetitions) / COUNT(id) AS avg_reps_per_set
+		FROM 
+			exercise_set;
+	`
+
+	type setsRepsRow struct {
+		TotalSets     int64 `db:"total_sets"`
+		TotalReps     int64 `db:"total_reps"`
+		AvgRepsPerSet int64 `db:"avg_reps_per_set"`
+	}
+
+	var setsRepsResult setsRepsRow
+
+	if err := d.db.GetContext(ctx, &setsRepsResult, setsRepsQuery); err != nil {
+		return statisticsRow{}, err
+	}
+
+	result.totalSets = setsRepsResult.TotalSets
+	result.totalReps = setsRepsResult.TotalReps
+	result.avgRepsPerSet = setsRepsResult.AvgRepsPerSet
 
 	return result, nil
 }

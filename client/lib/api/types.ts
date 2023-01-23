@@ -28,6 +28,9 @@ export type Statistics = {
     totalWorkouts: number;
     totalDurationSeconds: number;
     avgDurationSeconds: number;
+    totalSets: number;
+    totalReps: number;
+    avgRepsPerSet: number;
 };
 
 export type ExerciseExists = {

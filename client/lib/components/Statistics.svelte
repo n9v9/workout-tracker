@@ -7,15 +7,27 @@
     import LoadingBanner from "./LoadingBanner.svelte";
     import Title from "./Title.svelte";
 
+    let showQuickView = false;
+    let showDetailView = false;
+
     let totalWorkouts: number;
     let totalDuration: string;
     let avgDuration: string;
 
+    let totalSets: number;
+    let totalReps: number;
+    let avgRepsPerSet: number;
+
     onMount(async () => {
         const statistics = await api.getStatistics();
+
         totalWorkouts = statistics.totalWorkouts;
         totalDuration = getHourAndMinutes(statistics.totalDurationSeconds);
         avgDuration = getHourAndMinutes(statistics.avgDurationSeconds);
+
+        totalSets = statistics.totalSets;
+        totalReps = statistics.totalReps;
+        avgRepsPerSet = statistics.avgRepsPerSet;
     });
 
     function getHourAndMinutes(seconds: number): string {
@@ -41,40 +53,84 @@
 {#if $isLoading}
     <LoadingBanner />
 {:else}
-    <div class="block">
-        <h2 class="title is-4">Zeiten</h2>
-    </div>
-
-    <div class="block">
-        <div class="container">
-            <div class="has-text-centered">
-                <p class="is-size-6 heading">Anzahl Workouts</p>
-                <p class="title">{totalWorkouts}</p>
-            </div>
-            <div class="has-text-centered">
-                <p class="is-size-6 heading">Gesamt Workout Zeit</p>
-                <p class="title">{totalDuration}</p>
-            </div>
-            <div class="has-text-centered">
-                <p class="is-size-6 heading">Ø Workout Zeit</p>
-                <p class="title">{avgDuration}</p>
-            </div>
+    <div class="mb-2">
+        <div class="card">
+            <header
+                class="card-header"
+                on:click={() => (showQuickView = !showQuickView)}
+                on:keypress={() => (showQuickView = !showQuickView)}>
+                <p class="card-header-title">Schnellübersicht</p>
+                <button class="card-header-icon">
+                    <span class="icon">
+                        <i class="bi bi-chevron-{showQuickView ? 'down' : 'right'}" />
+                    </span>
+                </button>
+            </header>
+            {#if showQuickView}
+                <div class="card-content">
+                    <div class="content">
+                        <div class="container">
+                            <div class="has-text-centered">
+                                <p class="is-size-6 heading">Workouts</p>
+                                <p class="title">{totalWorkouts}</p>
+                            </div>
+                            <div class="has-text-centered">
+                                <p class="is-size-6 heading">Workout Zeit</p>
+                                <p class="title">{totalDuration}</p>
+                            </div>
+                            <div class="has-text-centered">
+                                <p class="is-size-6 heading">Ø Workout Zeit</p>
+                                <p class="title">{avgDuration}</p>
+                            </div>
+                            <div class="has-text-centered">
+                                <p class="is-size-6 heading">Sätze</p>
+                                <p class="title">{totalSets}</p>
+                            </div>
+                            <div class="has-text-centered">
+                                <p class="is-size-6 heading">Wiederholungen</p>
+                                <p class="title">{totalReps}</p>
+                            </div>
+                            <div class="has-text-centered">
+                                <p class="is-size-6 heading">Ø Wiederholungen pro Satz</p>
+                                <p class="title">{avgRepsPerSet}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
         </div>
     </div>
 
-    <div class="block">
-        <h2 class="title is-4">Übungen</h2>
+    <div class="card">
+        <header
+            class="card-header"
+            on:click={() => (showDetailView = !showDetailView)}
+            on:keypress={() => (showDetailView = !showDetailView)}>
+            <p class="card-header-title">Detailansicht</p>
+            <button class="card-header-icon">
+                <span class="icon">
+                    <i class="bi bi-chevron-{showDetailView ? 'down' : 'right'}" />
+                </span>
+            </button>
+        </header>
+        {#if showDetailView}
+            <div class="card-content" />
+        {/if}
     </div>
 {/if}
 
 <style>
     .container {
         display: grid;
-        grid-template-columns: repeat(auto-fit, 250px);
+        grid-template-columns: repeat(auto-fit, 350px);
         justify-content: center;
     }
 
     .container div {
         margin-bottom: 1.25rem;
+    }
+
+    .card-header:hover {
+        cursor: pointer;
     }
 </style>
