@@ -57,7 +57,7 @@
         </span>
         <span>Neuer Satz</span>
     </Button>
-    <Button classes="button is-fullwidth mt-2" click={() => navigate("/")}>
+    <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>
