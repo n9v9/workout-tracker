@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -682,7 +683,11 @@ type database struct {
 // If the database could not be opened, or connecting to the database failed,
 // the error will be logged and the application exits.
 func newDatabase(path string) *database {
-	db, err := sqlx.Open("sqlite", path)
+	args := []string{
+		"_pragma=foreign_keys(1)", // Enable foreign key checking.
+	}
+
+	db, err := sqlx.Open("sqlite", path+"?"+strings.Join(args, "&"))
 	if err != nil {
 		log.Err(err).
 			Str("path", path).
