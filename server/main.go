@@ -34,12 +34,18 @@ func main() {
 	}
 }
 
+// setupGlobalLogger sets up the global logger for the application.
+//
+// After this function is called, logging can be done by using the package
+// functions in [zerolog/log].
 func setupGlobalLogger() {
 	out := zerolog.ConsoleWriter{Out: os.Stderr}
 	logger := zerolog.New(out).With().Timestamp().Logger()
 	log.Logger = logger
 }
 
+// setupContext provides the [context.Context] for the application and registers
+// interrupt handler to signal cancellation.
 func setupContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -55,6 +61,8 @@ func setupContext() context.Context {
 	return ctx
 }
 
+// setupCLI sets up the command line interface to parse flags when
+// starting the application.
 func setupCLI() *cli.App {
 	return &cli.App{
 		Name:            "server",
@@ -92,6 +100,10 @@ type application struct {
 	db             *database
 }
 
+// newApplication initializes all dependencies, registers routes and returns
+// an initialized application.
+//
+// Any error that happens will be logged, and the application will exit.
 func newApplication(staticFilesDir, db string) *application {
 	app := &application{
 		staticFilesDir: staticFilesDir,
@@ -102,6 +114,9 @@ func newApplication(staticFilesDir, db string) *application {
 	return app
 }
 
+// run runs the HTTP server listening on the given address.
+//
+// Upon cancellation of ctx, the server will be shutdown and the method will return.
 func (a *application) run(ctx context.Context, addr string) {
 	done := make(chan struct{})
 
@@ -323,7 +338,7 @@ func (a *application) handleDeleteExercise(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := a.db.deleteExercise(r.Context(), id); err != nil {
-		if errors.Is(err, exerciseExistsErr) {
+		if errors.Is(err, errExerciseExists) {
 			l.Warn().Err(err).Msg("Invalid request tries to delete exercise that is used in sets.")
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -662,6 +677,10 @@ type database struct {
 	db *sqlx.DB
 }
 
+// newDatabase opens the SQLite database at the given path and tries to connect to it.
+//
+// If the database could not be opened, or connecting to the database failed,
+// the error will be logged and the application exits.
 func newDatabase(path string) *database {
 	db, err := sqlx.Open("sqlite", path)
 	if err != nil {
@@ -688,6 +707,11 @@ type workoutRow struct {
 	StartSecondsUnixEpoch uint64 `db:"start_seconds_unix_epoch"`
 }
 
+// workoutList returns all workouts.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) workoutList(ctx context.Context) ([]workoutRow, error) {
 	const query = `
 		SELECT
@@ -708,6 +732,11 @@ func (d *database) workoutList(ctx context.Context) ([]workoutRow, error) {
 	return result, nil
 }
 
+// createWorkout tries to create a new workout.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) createWorkout(ctx context.Context) (int64, error) {
 	const query = `
 		INSERT INTO workout (start_date_utc)
@@ -727,6 +756,11 @@ func (d *database) createWorkout(ctx context.Context) (int64, error) {
 	return id, nil
 }
 
+// deleteWorkout tries to delete the workout with the given ID.
+//
+// # Errors
+//
+// Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
 func (d *database) deleteWorkout(ctx context.Context, workoutID int) error {
 	const query = "DELETE FROM workout WHERE id = ?"
 
@@ -756,6 +790,11 @@ type setRow struct {
 	Weight               int    `db:"weight"`
 }
 
+// setsForWorkout returns all sets that belong to the workout with the given ID.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) setsForWorkout(ctx context.Context, workoutID int) ([]setRow, error) {
 	const query = `
 		SELECT
@@ -789,6 +828,11 @@ type exerciseRow struct {
 	Name string `db:"name"`
 }
 
+// exercises returns all exercises.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) exercises(ctx context.Context) ([]exerciseRow, error) {
 	const query = `
 		SELECT
@@ -809,6 +853,11 @@ func (d *database) exercises(ctx context.Context) ([]exerciseRow, error) {
 	return exercises, nil
 }
 
+// setByIds returns the set that belongs to the given IDS.
+//
+// # Errors
+//
+// Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
 func (d *database) setByIds(ctx context.Context, workoutID, setID int) (setRow, error) {
 	const query = `
 		SELECT
@@ -838,6 +887,11 @@ func (d *database) setByIds(ctx context.Context, workoutID, setID int) (setRow, 
 	return set, nil
 }
 
+// deleteSet tries to delete a set with the given IDs.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) deleteSet(ctx context.Context, workoutID, setID int) error {
 	const query = `
 		DELETE
@@ -855,6 +909,11 @@ func (d *database) deleteSet(ctx context.Context, workoutID, setID int) error {
 	return nil
 }
 
+// createSet tries to create a set with the given values.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) createSet(
 	ctx context.Context,
 	workoutID,
@@ -888,6 +947,11 @@ func (d *database) createSet(
 	return nil
 }
 
+// updateSet tries to update the set with the given IDs.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) updateSet(
 	ctx context.Context,
 	workoutID,
@@ -923,6 +987,11 @@ type setRecommendationRow struct {
 	Weight      int `db:"weight"`
 }
 
+// newSetRecommendation returns recommended values for a new set.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) newSetRecommendation(
 	ctx context.Context,
 	workoutID int,
@@ -954,22 +1023,22 @@ func (d *database) newSetRecommendation(
 
 	// Suggest the first set of the last workout that has sets.
 	const firstSetQuery = `
-SELECT
-	exercise_id,
-	repetitions,
-	weight
-FROM
-	exercise_set
-WHERE
-	workout_id = (
 		SELECT
-			MAX(w.id)
+			exercise_id,
+			repetitions,
+			weight
 		FROM
-			workout w JOIN exercise_set es on w.id = es.workout_id
-	)
-ORDER BY
-	date_utc ASC
-LIMIT 1;
+			exercise_set
+		WHERE
+			workout_id = (
+				SELECT
+					MAX(w.id)
+				FROM
+					workout w JOIN exercise_set es on w.id = es.workout_id
+			)
+		ORDER BY
+			date_utc ASC
+		LIMIT 1;
 	`
 
 	err = d.db.GetContext(ctx, &recommendation, firstSetQuery)
@@ -997,6 +1066,20 @@ type statisticsRow struct {
 	avgRepsPerSet int64
 }
 
+// statistics returns various statistics as described below.
+//
+// # statistics
+//
+//   - Total number of workouts.
+//   - Total duration of workouts.
+//   - Average duration of a workout.
+//   - Total number of repetitions.
+//   - Total number of sets.
+//   - Average number of repetitions per set.
+//
+// # Errors
+//
+// Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
 func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	const datesQuery = `
 		SELECT
@@ -1039,7 +1122,7 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 			COUNT(id) AS total_sets,
 			SUM(repetitions) AS total_reps,
 			SUM(repetitions) / COUNT(id) AS avg_reps_per_set
-		FROM 
+		FROM
 			exercise_set;
 	`
 
@@ -1062,6 +1145,11 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	return result, nil
 }
 
+// createExercise creates an exercise with the given name.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) createExercise(ctx context.Context, name string) (exerciseRow, error) {
 	const query = "INSERT INTO exercise (name) VALUES (?)"
 
@@ -1078,6 +1166,11 @@ func (d *database) createExercise(ctx context.Context, name string) (exerciseRow
 	return exerciseRow{ID: id, Name: name}, nil
 }
 
+// existsExerciseName returns whether an exercise with the given name exists.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) existsExerciseName(ctx context.Context, name string) (bool, error) {
 	const query = "SELECT 1 FROM exercise WHERE lower(name) = lower(?)"
 
@@ -1097,6 +1190,11 @@ func (d *database) existsExerciseName(ctx context.Context, name string) (bool, e
 	return false, err
 }
 
+// existsExerciseID checks whether an exercise with the given id exists.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) existsExerciseID(ctx context.Context, id int) (bool, error) {
 	const query = "SELECT 1 FROM exercise WHERE id = ?"
 
@@ -1116,10 +1214,14 @@ func (d *database) existsExerciseID(ctx context.Context, id int) (bool, error) {
 	return false, err
 }
 
-var exerciseExistsErr = errors.New("exercise exists in at least one set")
+var errExerciseExists = errors.New("exercise exists in at least one set")
 
 // deleteExercise tries to delete the exercise with the given id.
-// If the exercise is used in any sets, exerciseExistsErr will be returned.
+// If the exercise is used in any sets, [exerciseExistsErr] will be returned.
+//
+// # Errors
+//
+// Returns [exerciseExistsErr] if the exercise exists, or an underlying SQL error.
 func (d *database) deleteExercise(ctx context.Context, id int) error {
 	const checkQuery = `
 		SELECT
@@ -1128,7 +1230,8 @@ func (d *database) deleteExercise(ctx context.Context, id int) error {
 			exercise e
 		JOIN
 			exercise_set es ON e.id = es.exercise_id
-		WHERE e.id = ?;
+		WHERE
+			e.id = ?;
 	`
 
 	var count int64
@@ -1137,7 +1240,7 @@ func (d *database) deleteExercise(ctx context.Context, id int) error {
 		return err
 	}
 	if count > 0 {
-		return exerciseExistsErr
+		return errExerciseExists
 	}
 
 	const deleteQuery = "DELETE FROM exercise WHERE id = ?"
@@ -1147,6 +1250,10 @@ func (d *database) deleteExercise(ctx context.Context, id int) error {
 
 // exerciseCountInSets returns the number of times the exercise with
 // the given id is used in sets.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
 func (d *database) exerciseCountInSets(ctx context.Context, id int) (int64, error) {
 	const checkQuery = `
 		SELECT
@@ -1155,7 +1262,8 @@ func (d *database) exerciseCountInSets(ctx context.Context, id int) (int64, erro
 			exercise e
 		JOIN
 			exercise_set es ON e.id = es.exercise_id
-		WHERE e.id = ?;
+		WHERE
+			e.id = ?;
 	`
 
 	var count int64
