@@ -1,12 +1,23 @@
+<script lang="ts" context="module">
+    export type ConfirmBehavior = {
+        text: string;
+        click: () => void;
+        canClick: boolean;
+    };
+
+    export type CancelBehavior = {
+        text: string;
+        click: () => void;
+    };
+</script>
+
 <script lang="ts">
     import { isLoading } from "../store";
     import Button from "./Button.svelte";
 
     export let title: string;
-    export let confirm: () => void;
-    export let canConfirm = true;
-    export let confirmText: string;
-    export let cancel: () => void;
+    export let confirm: ConfirmBehavior | null = null;
+    export let cancel: CancelBehavior;
 </script>
 
 <div class="modal is-active">
@@ -21,11 +32,15 @@
         </section>
         <footer class="modal-card-foot p-3 is-justify-content-flex-end">
             <div class="same-width mr-2">
-                <Button classes="button is-fullwidth" click={confirm} disabled={!canConfirm}
-                    >{confirmText}</Button>
+                {#if confirm}
+                    <Button
+                        classes="button is-fullwidth"
+                        click={confirm.click}
+                        disabled={!confirm.canClick}>{confirm.text}</Button>
+                {/if}
             </div>
             <div class="same-width">
-                <Button classes="button is-fullwidth" click={cancel}>Abbrechen</Button>
+                <Button classes="button is-fullwidth" click={cancel.click}>{cancel.text}</Button>
             </div>
         </footer>
     </div>

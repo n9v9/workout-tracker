@@ -279,21 +279,32 @@
 {#if showDeleteModal}
     <Modal
         title="Satz Löschen"
-        confirmText="Löschen"
-        confirm={deleteSet}
-        cancel={() => (showDeleteModal = false)}>
+        confirm={{
+            text: "Löschen",
+            click: deleteSet,
+            canClick: true,
+        }}
+        cancel={{
+            text: "Abbrechen",
+            click: () => (showDeleteModal = false),
+        }}>
         Satz wirklich löschen?
     </Modal>
 {:else if showAddExerciseModal}
     <Modal
         title="Übung erstellen"
-        confirmText="Speichern"
-        confirm={createExercise}
-        canConfirm={canSaveNewExercise}
-        cancel={() => {
-            showAddExerciseModal = false;
-            inputExerciseName = "";
-            exerciseExists = false;
+        confirm={{
+            text: "Speichern",
+            click: createExercise,
+            canClick: canSaveNewExercise,
+        }}
+        cancel={{
+            text: "Abbrechen",
+            click: () => {
+                showAddExerciseModal = false;
+                inputExerciseName = "";
+                exerciseExists = false;
+            },
         }}>
         <div class="field">
             <label for="new-exercise-name" class="label">Name der Übung</label>
@@ -317,9 +328,15 @@
 {:else if showDeleteExerciseModal}
     <Modal
         title="Übung Löschen"
-        confirmText="Löschen"
-        confirm={deleteExercise}
-        cancel={() => (showDeleteExerciseModal = false)}>
+        confirm={{
+            text: "Löschen",
+            click: deleteExercise,
+            canClick: true,
+        }}
+        cancel={{
+            text: "Abbrechen",
+            click: () => (showDeleteExerciseModal = false),
+        }}>
         <p
             >Soll die Übung "{exercises.find(x => x.id === inputExerciseId).name}" wirklich gelöscht
             werden?</p>
@@ -327,9 +344,10 @@
 {:else if showCannotDeleteExerciseModal}
     <Modal
         title="Übung Löschen"
-        confirmText="OK"
-        confirm={() => (showCannotDeleteExerciseModal = false)}
-        cancel={() => (showCannotDeleteExerciseModal = false)}>
+        cancel={{
+            text: "OK",
+            click: () => (showCannotDeleteExerciseModal = false),
+        }}>
         <p
             >Die Übung "{exercises.find(x => x.id === inputExerciseId).name}" kann nicht gelöscht
             werden, da sie in {exerciseInSetsCount} Sätzen enthalten ist.</p>
