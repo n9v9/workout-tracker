@@ -12,14 +12,32 @@
 
     let sets: Set[] = [];
     let latest: Set | null = null;
+    let firstExerciseOfLatestSet: Set | null = null;
 
     onMount(async () => {
         sets = await api.getSetsByWorkoutId(id);
 
         if (sets.length > 0) {
-            latest = sets.reduce((acc, current) => {
-                return current.date.getTime() > acc.date.getTime() ? current : acc;
-            }, sets[0]);
+            sets.sort((a, b) => {
+                if (a.date < b.date) return 1;
+                if (a.date > b.date) return -1;
+                return 0;
+            });
+            latest = sets[0];
+
+            let ptr: Set;
+
+            for (let i = 0; i < sets.length; i++) {
+                ptr = sets[i];
+                if (latest.exerciseId !== sets[i].exerciseId) {
+                    firstExerciseOfLatestSet = sets[i - 1];
+                    break;
+                }
+            }
+
+            if (firstExerciseOfLatestSet === null) {
+                firstExerciseOfLatestSet = ptr;
+            }
         }
     });
 
@@ -47,9 +65,14 @@
     </Button>
 </div>
 
-{#if latest !== null}
-    <div class="block">
-        <Timer text="Zeit seit letztem Satz" reference={latest.date} />
+{#if latest !== null && firstExerciseOfLatestSet !== null}
+    <div class="block level is-mobile">
+        <div class="level-item">
+            <Timer text="Letzter Satz" reference={latest.date} />
+        </div>
+        <div class="level-item">
+            <Timer text="Aktuelle Übung" reference={firstExerciseOfLatestSet.date} />
+        </div>
     </div>
 {/if}
 
