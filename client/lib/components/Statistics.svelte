@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
-    import { isLoading, uiDisabled } from "../store";
+    import { isLoading } from "../store";
     import Button from "./Button.svelte";
     import LoadingBanner from "./LoadingBanner.svelte";
     import Title from "./Title.svelte";
@@ -12,17 +12,10 @@
     let avgDuration: string;
 
     onMount(async () => {
-        $isLoading = true;
-        $uiDisabled = true;
-        try {
-            const statistics = await api.getStatistics();
-            totalWorkouts = statistics.totalWorkouts;
-            totalDuration = getHourAndMinutes(statistics.totalDurationSeconds);
-            avgDuration = getHourAndMinutes(statistics.avgDurationSeconds);
-        } finally {
-            $isLoading = false;
-            $uiDisabled = false;
-        }
+        const statistics = await api.getStatistics();
+        totalWorkouts = statistics.totalWorkouts;
+        totalDuration = getHourAndMinutes(statistics.totalDurationSeconds);
+        avgDuration = getHourAndMinutes(statistics.avgDurationSeconds);
     });
 
     function getHourAndMinutes(seconds: number): string {

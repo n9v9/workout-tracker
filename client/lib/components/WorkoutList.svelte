@@ -3,7 +3,6 @@
     import { navigate } from "svelte-routing";
     import Notification from "./Notification.svelte";
     import Modal from "./Modal.svelte";
-    import { isLoading, uiDisabled } from "../store";
     import type { Workout } from "../api/types";
     import { api } from "../api/service";
     import { onMount } from "svelte";
@@ -21,40 +20,19 @@
     }
 
     async function deleteWorkout() {
-        $uiDisabled = true;
-        $isLoading = true;
-        try {
-            await api.deleteWorkout(selectedWorkout.id);
-            showDeleteModal = false;
-            await loadWorkoutList();
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-            showDeleteModal = false;
-        }
+        await api.deleteWorkout(selectedWorkout.id);
+        showDeleteModal = false;
+        await loadWorkoutList();
+        showDeleteModal = false;
     }
 
     async function createWorkout() {
-        $uiDisabled = true;
-        $isLoading = true;
-        try {
-            var id = await api.createWorkout();
-            navigate(`/workouts/${id}`);
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        var id = await api.createWorkout();
+        navigate(`/workouts/${id}`);
     }
 
     async function loadWorkoutList() {
-        $uiDisabled = true;
-        $isLoading = true;
-        try {
-            workouts = await api.getWorkoutList();
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        workouts = await api.getWorkoutList();
     }
 
     function formatDate(date: Date): string {

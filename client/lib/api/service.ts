@@ -1,4 +1,4 @@
-import { apiErrorMessage } from "../store";
+import { apiErrorMessage, isLoading, uiDisabled } from "../store";
 import type {
     EditSet,
     Exercise,
@@ -155,6 +155,9 @@ class ApiService {
         init: RequestInit = null,
         returnsJson: boolean = true,
     ): Promise<T | null> {
+        uiDisabled.set(true);
+        isLoading.set(true);
+
         try {
             if (init !== null) {
                 init.headers = {
@@ -176,6 +179,9 @@ class ApiService {
         } catch (err) {
             setApiErrorMessage(`Unexpected error: ${err}`);
             return null;
+        } finally {
+            uiDisabled.set(false);
+            isLoading.set(false);
         }
     }
 }

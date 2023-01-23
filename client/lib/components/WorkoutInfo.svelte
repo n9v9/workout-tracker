@@ -3,7 +3,6 @@
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import Title from "../components/Title.svelte";
-    import { isLoading, uiDisabled } from "../store";
     import Notification from "./Notification.svelte";
     import type { Set } from "../api/types";
     import Button from "./Button.svelte";
@@ -15,19 +14,12 @@
     let latest: Set | null = null;
 
     onMount(async () => {
-        try {
-            $isLoading = true;
-            $uiDisabled = true;
-            sets = await api.getSetsByWorkoutId(id);
+        sets = await api.getSetsByWorkoutId(id);
 
-            if (sets.length > 0) {
-                latest = sets.reduce((acc, current) => {
-                    return current.date.getTime() > acc.date.getTime() ? current : acc;
-                }, sets[0]);
-            }
-        } finally {
-            $isLoading = false;
-            $uiDisabled = false;
+        if (sets.length > 0) {
+            latest = sets.reduce((acc, current) => {
+                return current.date.getTime() > acc.date.getTime() ? current : acc;
+            }, sets[0]);
         }
     });
 

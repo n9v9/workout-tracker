@@ -3,7 +3,7 @@
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import type { Exercise } from "../api/types";
-    import { isLoading, uiDisabled } from "../store";
+    import { uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
@@ -58,28 +58,20 @@
     async function load() {
         resetVariables();
 
-        $uiDisabled = true;
-        $isLoading = true;
+        const result = await Promise.all([
+            api.getExercises(),
+            setId !== null
+                ? api.getSetByIds(workoutId, setId)
+                : api.getNewSetRecommendation(workoutId),
+        ]);
+        const set = result[1];
 
-        try {
-            const result = await Promise.all([
-                api.getExercises(),
-                setId !== null
-                    ? api.getSetByIds(workoutId, setId)
-                    : api.getNewSetRecommendation(workoutId),
-            ]);
-            const set = result[1];
+        exercises = result[0];
+        inputExerciseId = set.exerciseId;
+        inputRepetitions = set.repetitions.toString();
+        inputWeight = set.weight.toString();
 
-            exercises = result[0];
-            inputExerciseId = set.exerciseId;
-            inputRepetitions = set.repetitions.toString();
-            inputWeight = set.weight.toString();
-
-            checkCanSave();
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        checkCanSave();
     }
 
     function checkCanSave() {
@@ -91,32 +83,18 @@
     }
 
     async function save() {
-        $uiDisabled = true;
-        $isLoading = true;
-        try {
-            await api.createOrUpdateSet(workoutId, {
-                setId: setId,
-                exerciseId: inputExerciseId,
-                repetitions: parseInt(inputRepetitions),
-                weight: parseInt(inputWeight),
-            });
-            goBack();
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        await api.createOrUpdateSet(workoutId, {
+            setId: setId,
+            exerciseId: inputExerciseId,
+            repetitions: parseInt(inputRepetitions),
+            weight: parseInt(inputWeight),
+        });
+        goBack();
     }
 
     async function deleteSet() {
-        $uiDisabled = true;
-        $isLoading = true;
-        try {
-            await api.deleteSetById(workoutId, setId);
-            goBack();
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        await api.deleteSetById(workoutId, setId);
+        goBack();
     }
 
     function goBack() {
@@ -132,37 +110,21 @@
         const name = inputExerciseName.trim();
         const lowerName = name.toLowerCase();
 
-        $uiDisabled = true;
-        $isLoading = true;
+        exerciseExists = (await api.existsExercise(lowerName)).exists;
 
-        try {
-            exerciseExists = (await api.existsExercise(lowerName)).exists;
-
-            if (exerciseExists) {
-                existingExercises.push(lowerName);
-                canSaveNewExercise = false;
-                return;
-            }
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
+        if (exerciseExists) {
+            existingExercises.push(lowerName);
+            canSaveNewExercise = false;
+            return;
         }
 
-        $uiDisabled = true;
-        $isLoading = true;
+        const { id } = await api.createExercise(name);
+        showAddExerciseModal = false;
 
-        try {
-            const { id } = await api.createExercise(name);
-            showAddExerciseModal = false;
-
-            // Reload this component, then set the exercise ID to the ID
-            // of the newly created exercise.
-            await load();
-            inputExerciseId = id;
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        // Reload this component, then set the exercise ID to the ID
+        // of the newly created exercise.
+        await load();
+        inputExerciseId = id;
     }
 
     async function onNewExerciseKeyUp(event: KeyboardEvent) {
@@ -183,36 +145,20 @@
     }
 
     async function openDeleteExerciseModal() {
-        $uiDisabled = true;
-        $isLoading = true;
+        const result = await api.getExerciseCountInSets(inputExerciseId);
 
-        try {
-            const result = await api.getExerciseCountInSets(inputExerciseId);
-
-            if (result.count > 0) {
-                showCannotDeleteExerciseModal = true;
-                exerciseInSetsCount = result.count;
-                return;
-            }
-
-            showDeleteExerciseModal = true;
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
+        if (result.count > 0) {
+            showCannotDeleteExerciseModal = true;
+            exerciseInSetsCount = result.count;
+            return;
         }
+
+        showDeleteExerciseModal = true;
     }
 
     async function deleteExercise() {
-        $uiDisabled = true;
-        $isLoading = true;
-
-        try {
-            await api.deleteExercise(inputExerciseId);
-            await load();
-        } finally {
-            $uiDisabled = false;
-            $isLoading = false;
-        }
+        await api.deleteExercise(inputExerciseId);
+        await load();
     }
 </script>
 
