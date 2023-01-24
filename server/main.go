@@ -279,7 +279,6 @@ func (a *application) exerciseMustExist(parameter string) func(http.Handler) htt
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-
 			if !exists {
 				hlog.FromRequest(r).Warn().Msg("Invalid request for exercise with non existing ID.")
 				w.WriteHeader(http.StatusBadRequest)
@@ -311,7 +310,6 @@ func (a *application) workoutMustExist(parameter string) func(http.Handler) http
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-
 			if !exists {
 				hlog.FromRequest(r).Warn().Msg("Invalid request for workout with non existing ID.")
 				w.WriteHeader(http.StatusBadRequest)
@@ -342,7 +340,6 @@ func (a *application) setMustExist(parameter string) func(http.Handler) http.Han
 				hlog.FromRequest(r).Warn().Msg("Invalid request for set with non existing ID.")
 				w.WriteHeader(http.StatusBadRequest)
 				return
-
 			}
 			if err != nil {
 				hlog.FromRequest(r).Err(err).Msg("Failed to check if set with given ID exists.")
@@ -777,7 +774,6 @@ func writeJSON(w http.ResponseWriter, r *http.Request, data any) {
 			Msg("Failed to send JSON response.")
 
 		w.WriteHeader(http.StatusInternalServerError)
-
 		return
 	}
 }
