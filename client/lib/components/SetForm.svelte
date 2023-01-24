@@ -60,9 +60,7 @@
 
         const result = await Promise.all([
             api.getExercises(),
-            setId !== null
-                ? api.getSetByIds(workoutId, setId)
-                : api.getNewSetRecommendation(workoutId),
+            setId !== null ? api.getSetByIds(setId) : api.getNewSetRecommendation(workoutId),
         ]);
         const set = result[1];
 
@@ -83,8 +81,7 @@
     }
 
     async function save() {
-        await api.createOrUpdateSet(workoutId, {
-            setId: setId,
+        await api.createOrUpdateSet(workoutId, setId, {
             exerciseId: inputExerciseId,
             repetitions: parseInt(inputRepetitions),
             weight: parseInt(inputWeight),
@@ -93,7 +90,7 @@
     }
 
     async function deleteSet() {
-        await api.deleteSetById(workoutId, setId);
+        await api.deleteSetById(setId);
         goBack();
     }
 

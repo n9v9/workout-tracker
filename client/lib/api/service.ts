@@ -65,8 +65,8 @@ class ApiService {
         return await this.getJson<Exercise[]>(`exercises`);
     }
 
-    async getSetByIds(workoutId: number, setId: number): Promise<Set> {
-        const set = await this.getJson<SetEntity>(`workouts/${workoutId}/sets/${setId}`);
+    async getSetByIds(setId: number): Promise<Set> {
+        const set = await this.getJson<SetEntity>(`sets/${setId}`);
 
         return {
             id: set.id,
@@ -78,10 +78,10 @@ class ApiService {
         };
     }
 
-    async createOrUpdateSet(workoutId: number, set: EditSet): Promise<void> {
+    async createOrUpdateSet(workoutId: number, setId: null | number, set: EditSet): Promise<void> {
         let promise: Promise<Response>;
 
-        if (set.setId === null) {
+        if (setId === null) {
             promise = this.getJson(
                 `workouts/${workoutId}/sets`,
                 {
@@ -92,7 +92,7 @@ class ApiService {
             );
         } else {
             promise = this.getJson(
-                `workouts/${workoutId}/sets/${set.setId}`,
+                `sets/${setId}`,
                 {
                     method: "PUT",
                     body: JSON.stringify(set),
@@ -104,9 +104,9 @@ class ApiService {
         await promise;
     }
 
-    async deleteSetById(workoutId: number, setId: number): Promise<void> {
+    async deleteSetById(setId: number): Promise<void> {
         await this.getJson(
-            `workouts/${workoutId}/sets/${setId}`,
+            `sets/${setId}`,
             {
                 method: "DELETE",
             },

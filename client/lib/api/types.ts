@@ -18,7 +18,6 @@ export type Set = {
 };
 
 export type EditSet = {
-    setId: number | null;
     exerciseId: number;
     repetitions: number;
     weight: number;
