@@ -29,9 +29,9 @@ import (
 // Strongly typed URL parameter names.
 // So we don't need string replace when chaning a parameter name.
 const (
-	paramWorkoutID  = "workoutID"
-	paramSetID      = "setID"
-	paramExerciseID = "exerciseID"
+	paramWorkoutID  = "workout_id"
+	paramSetID      = "set_id"
+	paramExerciseID = "exercise_id"
 )
 
 func main() {
