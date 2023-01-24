@@ -148,20 +148,40 @@ func (a *application) run(ctx context.Context, addr string) {
 }
 
 func (a *application) routes() {
+	// Setup logging middleware.
 	logging := alice.New(
 		hlog.NewHandler(log.Logger),
 		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
-			event := hlog.FromRequest(r).Info().
+			// This function will be called after the request has been served.
+			hlog.FromRequest(r).Info().
 				Int("size", size).
 				Int("status", status).
-				Dur("duration", duration)
+				Dur("duration", duration).
+				Send()
+		}),
+		hlog.MethodHandler("method"),
+		hlog.URLHandler("url"),
+		hlog.RemoteAddrHandler("ip"),
+		hlog.RequestIDHandler("request_id", ""),
+	)
 
+	a.router.Use(func(h http.Handler) http.Handler {
+		return logging.Then(h)
+	})
+
+	// Add URL parameters to the logging context. That way, URL parameters are als logged
+	// when emitting logs from the handlers.
+	//
+	// Because of the way routing in chi works, this function cannot be a middleware,
+	// but instead has to be attached to a router with the `With` method. Otherwise the URL params
+	// woul only be visible after the handler has executed.
+	logURLParams := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			logParams := zerolog.Dict()
 			urlParams := chi.RouteContext(r.Context()).URLParams
 
 			for i, key := range urlParams.Keys {
-				// XXX: I don't know why go-chi adds this parameter when using sub routers.
-				//      Just filter this param out for now as it's value is always "".
+				// Ignore the asterisk which stands for the complete route.
 				if key == "*" {
 					continue
 				}
@@ -169,17 +189,13 @@ func (a *application) routes() {
 				logParams.Str(key, value)
 			}
 
-			event.Dict("url_params", logParams)
-			event.Send()
-		}),
-		hlog.MethodHandler("method"),
-		hlog.URLHandler("url"),
-		hlog.RemoteAddrHandler("ip"),
-	)
+			hlog.FromRequest(r).UpdateContext(func(c zerolog.Context) zerolog.Context {
+				return c.Dict("url_params", logParams)
+			})
 
-	a.router.Use(func(h http.Handler) http.Handler {
-		return logging.Then(h)
-	})
+			h.ServeHTTP(w, r)
+		})
+	}
 
 	//
 	// Static files handlers
@@ -193,7 +209,7 @@ func (a *application) routes() {
 	//
 	// API handlers
 	//
-	api := chi.NewRouter()
+	api := chi.NewRouter().With(logURLParams)
 	a.router.Mount("/api", api)
 
 	//
