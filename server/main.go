@@ -143,7 +143,7 @@ func (a *application) run(ctx context.Context, addr string) {
 	log.Info().Str("addr", addr).Msg("Serving REST API on given address.")
 
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-		log.Err(err).Msg("HTTP Server ListenAndServe")
+		log.Err(err).Msg("Failed running HTTP Server ListenAndServe.")
 	}
 }
 
@@ -815,7 +815,7 @@ func newDatabase(path string) *database {
 	if err := db.Ping(); err != nil {
 		log.Err(err).
 			Str("path", path).
-			Msg("Failed to test connection to database")
+			Msg("Failed to test connection to database.")
 
 		os.Exit(1)
 	}
