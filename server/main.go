@@ -27,7 +27,7 @@ import (
 )
 
 // Strongly typed URL parameter names.
-// So we don't need string replace when chaning a parameter name.
+// So we don't need string replace when changing a parameter name.
 const (
 	paramWorkoutID  = "workout_id"
 	paramSetID      = "set_id"
@@ -823,6 +823,10 @@ func newDatabase(path string) *database {
 	return &database{db}
 }
 
+func (d *database) migrate() error {
+	return nil
+}
+
 type workoutRow struct {
 	ID                    uint64 `db:"id"`
 	StartSecondsUnixEpoch uint64 `db:"start_seconds_unix_epoch"`
@@ -835,13 +839,10 @@ type workoutRow struct {
 // Returns an underlying SQL error.
 func (d *database) workoutList(ctx context.Context) ([]workoutRow, error) {
 	const query = `
-		SELECT
-			id,
-			UNIXEPOCH(start_date_utc) AS start_seconds_unix_epoch
-		FROM
-			workout
-		ORDER BY
-			start_date_utc DESC
+		SELECT id,
+			   UNIXEPOCH(start_date_utc) AS start_seconds_unix_epoch
+		  FROM workout
+		 ORDER BY start_date_utc DESC
 	`
 
 	var result []workoutRow
@@ -860,12 +861,9 @@ func (d *database) workoutList(ctx context.Context) ([]workoutRow, error) {
 // Returns an underlying SQL error.
 func (d *database) workoutExists(ctx context.Context, id int) (bool, error) {
 	const query = `
-		SELECT
-			COUNT(id)
-		FROM
-			workout
-		WHERE
-			id = ?
+		SELECT COUNT(id)
+		  FROM workout
+		 WHERE id = ?
 	`
 
 	var count int
@@ -907,7 +905,11 @@ func (d *database) createWorkout(ctx context.Context) (int64, error) {
 //
 // Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
 func (d *database) deleteWorkout(ctx context.Context, id int) error {
-	const query = "DELETE FROM workout WHERE id = ?"
+	const query = `
+		DELETE
+		  FROM workout
+		 WHERE id = ?
+	`
 
 	result, err := d.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -942,21 +944,17 @@ type setRow struct {
 // Returns an underlying SQL error.
 func (d *database) setsByWorkoutID(ctx context.Context, id int) ([]setRow, error) {
 	const query = `
-		SELECT
-			es.id,
-			es.exercise_id,
-			e.name AS exercise_name,
-			UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
-			es.repetitions,
-			es.weight
-		FROM
-			exercise_set AS es
-		JOIN
-			exercise AS e ON es.exercise_id = e.id
-		WHERE
-			es.workout_id = ?
-		ORDER BY
-			es.date_utc DESC
+		SELECT es.id,
+			   es.exercise_id,
+			   e.name                 AS exercise_name,
+			   UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
+			   es.repetitions,
+			   es.weight
+		  FROM exercise_set AS es
+			   JOIN
+			   exercise     AS e ON es.exercise_id = e.id
+		 WHERE es.workout_id = ?
+		 ORDER BY es.date_utc DESC
 	`
 
 	var sets []setRow
@@ -980,13 +978,10 @@ type exerciseRow struct {
 // Returns an underlying SQL error.
 func (d *database) exercises(ctx context.Context) ([]exerciseRow, error) {
 	const query = `
-		SELECT
-			id,
-			name
-		FROM
-			exercise
-		ORDER BY
-			name ASC
+		SELECT id,
+			   name
+		  FROM exercise
+		 ORDER BY name ASC
 	`
 
 	var exercises []exerciseRow
@@ -1005,21 +1000,17 @@ func (d *database) exercises(ctx context.Context) ([]exerciseRow, error) {
 // Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
 func (d *database) setById(ctx context.Context, id int) (setRow, error) {
 	const query = `
-		SELECT
-			es.id,
-			es.exercise_id,
-			e.name AS exercise_name,
-			UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
-			es.repetitions,
-			es.weight
-		FROM
-			exercise_set AS es
-		JOIN
-			exercise AS e ON es.exercise_id = e.id
-		WHERE
-			es.id = ?
-		ORDER BY
-			es.date_utc DESC
+		SELECT es.id,
+			   es.exercise_id,
+			   e.name                 AS exercise_name,
+			   UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
+			   es.repetitions,
+			   es.weight
+		  FROM exercise_set AS es
+			   JOIN
+			   exercise     AS e ON es.exercise_id = e.id
+		 WHERE es.id = ?
+		 ORDER BY es.date_utc DESC
 	`
 
 	var set setRow
@@ -1039,10 +1030,8 @@ func (d *database) setById(ctx context.Context, id int) (setRow, error) {
 func (d *database) deleteSet(ctx context.Context, id int) error {
 	const query = `
 		DELETE
-		FROM
-			exercise_set
-		WHERE
-			id = ?
+		  FROM exercise_set
+		 WHERE id = ?
 	`
 
 	if _, err := d.db.ExecContext(ctx, query, id); err != nil {
@@ -1065,20 +1054,16 @@ func (d *database) createSet(
 	weight int,
 ) error {
 	const query = `
-		INSERT INTO exercise_set (
-			exercise_id,
-			workout_id,
-			date_utc,
-			repetitions,
-			weight
-		)
-		VALUES (
-			?,
-			?,
-			DATETIME('now'),
-			?,
-			?
-		)
+		INSERT INTO exercise_set (exercise_id,
+								  workout_id,
+								  date_utc,
+								  repetitions,
+								  weight)
+		VALUES (?,
+				?,
+				DATETIME('now'),
+				?,
+				?)
 	`
 
 	if _, err := d.db.ExecContext(
@@ -1105,12 +1090,10 @@ func (d *database) updateSet(
 	const query = `
 		UPDATE
 			exercise_set
-		SET
-			exercise_id = ?,
-			repetitions = ?,
-			weight = ?
-		WHERE
-			id = ?
+		   SET exercise_id = ?,
+			   repetitions = ?,
+			   weight      = ?
+		 WHERE id = ?
 	`
 
 	if _, err := d.db.ExecContext(ctx, query, exerciseID, repetitions, weight, id); err != nil {
@@ -1137,17 +1120,13 @@ func (d *database) setRecommendationByWorkoutID(
 ) (setRecommendationRow, error) {
 	// Very simple recommendation, just recommend the last set.
 	const lastSetQuery = `
-		SELECT
-			exercise_id,
-			repetitions,
-			weight
-		FROM
-			exercise_set
-		WHERE
-			workout_id = ?
-		ORDER BY
-			date_utc DESC
-		LIMIT 1
+		SELECT exercise_id,
+			   repetitions,
+			   weight
+		  FROM exercise_set
+		 WHERE workout_id = ?
+		 ORDER BY date_utc DESC
+		 LIMIT 1
 	`
 
 	var recommendation setRecommendationRow
@@ -1162,22 +1141,15 @@ func (d *database) setRecommendationByWorkoutID(
 
 	// Suggest the first set of the last workout that has sets.
 	const firstSetQuery = `
-		SELECT
-			exercise_id,
-			repetitions,
-			weight
-		FROM
-			exercise_set
-		WHERE
-			workout_id = (
-				SELECT
-					MAX(w.id)
-				FROM
-					workout w JOIN exercise_set es on w.id = es.workout_id
-			)
-		ORDER BY
-			date_utc ASC
-		LIMIT 1;
+		SELECT exercise_id,
+			   repetitions,
+			   weight
+		  FROM exercise_set
+		 WHERE workout_id = (SELECT MAX(w.id)
+							   FROM workout           w
+									JOIN exercise_set es ON w.id = es.workout_id)
+		 ORDER BY date_utc
+		 LIMIT 1;
 	`
 
 	err = d.db.GetContext(ctx, &recommendation, firstSetQuery)
@@ -1221,15 +1193,12 @@ type statisticsRow struct {
 // Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
 func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	const datesQuery = `
-		SELECT
-			UNIXEPOCH(w.start_date_utc) AS start_date_utc,
-			UNIXEPOCH(MAX(es.date_utc)) AS end_date_utc
-		FROM
-			exercise_set es
-		JOIN
-			workout w on es.workout_id = w.id
-		GROUP BY
-			w.id;
+		SELECT UNIXEPOCH(w.start_date_utc) AS start_date_utc,
+			   UNIXEPOCH(MAX(es.date_utc)) AS end_date_utc
+		  FROM exercise_set es
+			   JOIN
+			   workout      w ON es.workout_id = w.id
+		 GROUP BY w.id
 	`
 
 	type datesRow struct {
@@ -1257,12 +1226,10 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 	result.avgDuration = time.Duration(int64(result.totalDuration) / result.totalWorkouts)
 
 	const setsRepsQuery = `
-		SELECT
-			COUNT(id) AS total_sets,
-			SUM(repetitions) AS total_reps,
-			SUM(repetitions) / COUNT(id) AS avg_reps_per_set
-		FROM
-			exercise_set;
+		SELECT COUNT(id)                    AS total_sets,
+			   SUM(repetitions)             AS total_reps,
+			   SUM(repetitions) / COUNT(id) AS avg_reps_per_set
+		  FROM exercise_set;
 	`
 
 	type setsRepsRow struct {
@@ -1290,7 +1257,10 @@ func (d *database) statistics(ctx context.Context) (statisticsRow, error) {
 //
 // Returns an underlying SQL error.
 func (d *database) createExercise(ctx context.Context, name string) (exerciseRow, error) {
-	const query = "INSERT INTO exercise (name) VALUES (?)"
+	const query = `
+		INSERT INTO exercise (name)
+		VALUES (?)
+	`
 
 	result, err := d.db.ExecContext(ctx, query, name)
 	if err != nil {
@@ -1311,7 +1281,11 @@ func (d *database) createExercise(ctx context.Context, name string) (exerciseRow
 //
 // Returns an underlying SQL error.
 func (d *database) existsExerciseName(ctx context.Context, name string) (bool, error) {
-	const query = "SELECT 1 FROM exercise WHERE lower(name) = lower(?)"
+	const query = `
+		SELECT 1
+		  FROM exercise
+		 WHERE LOWER(name) = LOWER(?)
+	`
 
 	// Don't care about this value, just care about the existence.
 	var tmp string
@@ -1335,7 +1309,11 @@ func (d *database) existsExerciseName(ctx context.Context, name string) (bool, e
 //
 // Returns an underlying SQL error.
 func (d *database) existsExerciseID(ctx context.Context, id int) (bool, error) {
-	const query = "SELECT 1 FROM exercise WHERE id = ?"
+	const query = `
+		SELECT 1
+		  FROM exercise
+		 WHERE id = ?
+	`
 
 	// Don't care about this value, just care about the existence.
 	var tmp string
@@ -1363,14 +1341,11 @@ var errExerciseExists = errors.New("exercise exists in at least one set")
 // Returns [exerciseExistsErr] if the exercise exists, or an underlying SQL error.
 func (d *database) deleteExercise(ctx context.Context, id int) error {
 	const checkQuery = `
-		SELECT
-			COUNT(*)
-		FROM
-			exercise e
-		JOIN
-			exercise_set es ON e.id = es.exercise_id
-		WHERE
-			e.id = ?;
+		SELECT COUNT(*)
+		  FROM exercise     e
+			   JOIN
+			   exercise_set es ON e.id = es.exercise_id
+		 WHERE e.id = ?;
 	`
 
 	var count int64
@@ -1382,7 +1357,11 @@ func (d *database) deleteExercise(ctx context.Context, id int) error {
 		return errExerciseExists
 	}
 
-	const deleteQuery = "DELETE FROM exercise WHERE id = ?"
+	const deleteQuery = `
+		DELETE
+		  FROM exercise
+		 WHERE id = ?
+	`
 	_, err = d.db.ExecContext(ctx, deleteQuery, id)
 	return err
 }
@@ -1395,14 +1374,11 @@ func (d *database) deleteExercise(ctx context.Context, id int) error {
 // Returns an underlying SQL error.
 func (d *database) exerciseCountInSets(ctx context.Context, id int) (int64, error) {
 	const checkQuery = `
-		SELECT
-			COUNT(*)
-		FROM
-			exercise e
-		JOIN
-			exercise_set es ON e.id = es.exercise_id
-		WHERE
-			e.id = ?;
+		SELECT COUNT(*)
+		  FROM exercise     e
+			   JOIN
+			   exercise_set es ON e.id = es.exercise_id
+		 WHERE e.id = ?;
 	`
 
 	var count int64
