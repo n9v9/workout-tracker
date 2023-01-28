@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/sqlite"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jmoiron/sqlx"
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
@@ -46,7 +50,7 @@ func main() {
 // setupGlobalLogger sets up the global logger for the application.
 //
 // After this function is called, logging can be done by using the package
-// functions in [zerolog/log].
+// functions in [github.com/rs/zerolog/log].
 func setupGlobalLogger() {
 	out := zerolog.ConsoleWriter{Out: os.Stderr}
 	logger := zerolog.New(out).With().Timestamp().Logger()
@@ -120,6 +124,7 @@ func newApplication(staticFilesDir, db string) *application {
 		db:             newDatabase(db),
 	}
 	app.routes()
+	app.db.runMigrations()
 	return app
 }
 
@@ -823,8 +828,42 @@ func newDatabase(path string) *database {
 	return &database{db}
 }
 
-func (d *database) migrate() error {
-	return nil
+//go:embed migrations/*.sql
+var migrations embed.FS
+
+// runMigrations tries to run all remaining up migrations.
+// If an error happens, the error will be logged and the application exits.
+func (d *database) runMigrations() {
+	log.Info().Msg("Running migrations.")
+	start := time.Now()
+	defer func() {
+		log.Info().Dur("duration", time.Since(start)).Msg("Running migrations done.")
+	}()
+
+	driver, err := sqlite.WithInstance(d.db.DB, new(sqlite.Config))
+	if err != nil {
+		log.Err(err).Msg("Failed to create migration instance.")
+		os.Exit(1)
+	}
+
+	files, err := iofs.New(migrations, "migrations")
+	if err != nil {
+		log.Err(err).Msg("Failed to create iofs source driver for migrations.")
+		os.Exit(1)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", files, "workout-tracker", driver)
+	if err != nil {
+		log.Err(err).Msg("Failed to create migration instance.")
+	}
+
+	if err := m.Up(); err != nil {
+		if errors.Is(err, migrate.ErrNoChange) {
+			log.Info().Msg("All migrations are already applied.")
+		} else {
+			log.Err(err).Msg("Failed to run migrations.")
+		}
+	}
 }
 
 type workoutRow struct {
@@ -1334,11 +1373,11 @@ func (d *database) existsExerciseID(ctx context.Context, id int) (bool, error) {
 var errExerciseExists = errors.New("exercise exists in at least one set")
 
 // deleteExercise tries to delete the exercise with the given id.
-// If the exercise is used in any sets, [exerciseExistsErr] will be returned.
+// If the exercise is used in any sets, errExerciseExists will be returned.
 //
 // # Errors
 //
-// Returns [exerciseExistsErr] if the exercise exists, or an underlying SQL error.
+// Returns errExerciseExists if the exercise exists, or an underlying SQL error.
 func (d *database) deleteExercise(ctx context.Context, id int) error {
 	const checkQuery = `
 		SELECT COUNT(*)
