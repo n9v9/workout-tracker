@@ -4,15 +4,15 @@
     import { api } from "../api/service";
     import Title from "../components/Title.svelte";
     import Notification from "./Notification.svelte";
-    import type { Set } from "../api/types";
+    import type { ExerciseSet } from "../api/types";
     import Button from "./Button.svelte";
     import Timer from "./Timer.svelte";
 
     export let id: number;
 
-    let sets: Set[] = [];
-    let latest: Set | null = null;
-    let firstExerciseOfLatestSet: Set | null = null;
+    let sets: ExerciseSet[] = [];
+    let latest: ExerciseSet | null = null;
+    let firstExerciseOfLatestSet: ExerciseSet | null = null;
 
     onMount(async () => {
         sets = await api.getSetsByWorkoutId(id);
@@ -25,7 +25,7 @@
             });
             latest = sets[0];
 
-            let ptr: Set;
+            let ptr: ExerciseSet;
 
             for (let i = 0; i < sets.length; i++) {
                 ptr = sets[i];
@@ -41,7 +41,7 @@
         }
     });
 
-    function editSet(set: Set) {
+    function editSet(set: ExerciseSet) {
         navigate(`/workouts/${id}/sets/${set.id}`);
     }
 </script>
@@ -95,7 +95,14 @@
             <tbody>
                 {#each sets as set}
                     <tr on:click={() => editSet(set)}>
-                        <td>{set.exerciseName}</td>
+                        <td>
+                            {set.exerciseName}
+                            {#if set.note}
+                                <sup>
+                                    <i class="bi bi-chat-left-text has-text-link" />
+                                </sup>
+                            {/if}
+                        </td>
                         <td>{set.repetitions}</td>
                         <td>{set.weight}</td>
                     </tr>

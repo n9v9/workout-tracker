@@ -4,7 +4,7 @@ import type {
     Exercise,
     ExerciseCountInSets,
     ExerciseExists,
-    Set,
+    ExerciseSet,
     Statistics,
     Workout,
 } from "./types";
@@ -16,6 +16,7 @@ type SetEntity = {
     doneSecondsUnixEpoch: number;
     repetitions: number;
     weight: number;
+    note: string | null;
 };
 
 class ApiService {
@@ -50,7 +51,7 @@ class ApiService {
         ).id;
     }
 
-    async getSetsByWorkoutId(id: number): Promise<Set[]> {
+    async getSetsByWorkoutId(id: number): Promise<ExerciseSet[]> {
         return (await this.getJson<SetEntity[]>(`workouts/${id}/sets`)).map(x => ({
             id: x.id,
             exerciseId: x.exerciseId,
@@ -58,6 +59,7 @@ class ApiService {
             repetitions: x.repetitions,
             weight: x.weight,
             date: new Date(x.doneSecondsUnixEpoch * 1000),
+            note: x.note ?? "",
         }));
     }
 
@@ -65,7 +67,7 @@ class ApiService {
         return await this.getJson<Exercise[]>(`exercises`);
     }
 
-    async getSetByIds(setId: number): Promise<Set> {
+    async getSetByIds(setId: number): Promise<ExerciseSet> {
         const set = await this.getJson<SetEntity>(`sets/${setId}`);
 
         return {
@@ -75,6 +77,7 @@ class ApiService {
             repetitions: set.repetitions,
             weight: set.weight,
             date: new Date(set.doneSecondsUnixEpoch * 1000),
+            note: set.note,
         };
     }
 
@@ -114,8 +117,8 @@ class ApiService {
         );
     }
 
-    async getNewSetRecommendation(workoutId: number): Promise<Set> {
-        return await this.getJson<Set>(`workouts/${workoutId}/sets/recommendation`);
+    async getNewSetRecommendation(workoutId: number): Promise<ExerciseSet> {
+        return await this.getJson<ExerciseSet>(`workouts/${workoutId}/sets/recommendation`);
     }
 
     async getStatistics(): Promise<Statistics> {

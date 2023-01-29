@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
-    import type { Exercise } from "../api/types";
+    import type { Exercise, ExerciseSet } from "../api/types";
     import { uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
@@ -16,6 +16,7 @@
     let inputExerciseId: number;
     let inputRepetitions: string;
     let inputWeight: string;
+    let inputNote = "";
 
     let inputWeightElement: HTMLInputElement;
     let inputExerciseNameElement: HTMLInputElement;
@@ -40,6 +41,7 @@
         inputExerciseId = undefined;
         inputRepetitions = undefined;
         inputWeight = undefined;
+        inputNote = "";
 
         inputExerciseName = "";
 
@@ -62,12 +64,13 @@
             api.getExercises(),
             setId !== null ? api.getSetByIds(setId) : api.getNewSetRecommendation(workoutId),
         ]);
-        const set = result[1];
+        const set = result[1] as ExerciseSet;
 
-        exercises = result[0];
+        exercises = result[0] as Exercise[];
         inputExerciseId = set.exerciseId;
         inputRepetitions = set.repetitions.toString();
         inputWeight = set.weight.toString();
+        inputNote = set.note || "";
 
         checkCanSave();
     }
@@ -85,7 +88,9 @@
             exerciseId: inputExerciseId,
             repetitions: parseInt(inputRepetitions),
             weight: parseInt(inputWeight),
+            note: inputNote.trim(),
         });
+
         goBack();
     }
 
@@ -253,6 +258,13 @@
     </div>
 </div>
 
+<div class="field">
+    <label for="note" class="label">Notiz</label>
+    <div class="control">
+        <span id="note" class="textarea" contenteditable="true" role="textbox">{inputNote}</span>
+    </div>
+</div>
+
 <div class="btn-group">
     <!-- This div is always displayed so that the other two divs are aligned to the right. -->
     <div>
@@ -364,6 +376,19 @@
 
     .btn-group div:not(:last-child) {
         margin-right: 0.75rem;
+    }
+
+    #note {
+        display: block;
+        padding: calc(0.75em - 1px);
+        min-height: 0;
+        height: auto;
+        line-height: 1.5;
+    }
+
+    #note[contenteditable]:empty::before {
+        content: "Optionale Notiz ...";
+        color: gray;
     }
 
     @media only screen and (max-width: 768px) {

@@ -8,19 +8,21 @@ export type Exercise = {
     name: string;
 };
 
-export type Set = {
+export type ExerciseSet = {
     id: number;
     exerciseId: number;
     exerciseName: string;
     date: Date;
     repetitions: number;
     weight: number;
+    note: string | null | undefined;
 };
 
 export type EditSet = {
     exerciseId: number;
     repetitions: number;
     weight: number;
+    note: string | null;
 };
 
 export type Statistics = {

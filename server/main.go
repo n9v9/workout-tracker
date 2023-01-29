@@ -583,12 +583,13 @@ func (a *application) handleDeleteWorkout(w http.ResponseWriter, r *http.Request
 }
 
 type setResponse struct {
-	ID                   int    `json:"id"`
-	ExerciseID           int    `json:"exerciseId"`
-	ExerciseName         string `json:"exerciseName"`
-	DoneSecondsUnixEpoch int    `json:"doneSecondsUnixEpoch"`
-	Repetitions          int    `json:"repetitions"`
-	Weight               int    `json:"weight"`
+	ID                   int     `json:"id"`
+	ExerciseID           int     `json:"exerciseId"`
+	ExerciseName         string  `json:"exerciseName"`
+	DoneSecondsUnixEpoch int     `json:"doneSecondsUnixEpoch"`
+	Repetitions          int     `json:"repetitions"`
+	Weight               int     `json:"weight"`
+	Note                 *string `json:"note"`
 }
 
 func (a *application) handleGetSetsByWorkoutId(w http.ResponseWriter, r *http.Request) {
@@ -661,9 +662,10 @@ func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type body struct {
-		ExerciseID  int `json:"exerciseId"`
-		Repetitions int `json:"repetitions"`
-		Weight      int `json:"weight"`
+		ExerciseID  int    `json:"exerciseId"`
+		Repetitions int    `json:"repetitions"`
+		Weight      int    `json:"weight"`
+		Note        string `json:"note"`
 	}
 
 	var b body
@@ -673,7 +675,7 @@ func (a *application) handleCreateSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.db.createSet(
-		r.Context(), id, b.ExerciseID, b.Repetitions, b.Weight,
+		r.Context(), id, b.ExerciseID, b.Repetitions, b.Weight, b.Note,
 	); err != nil {
 		l.Err(err).Msg("Failed to create new set.")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -690,9 +692,10 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type body struct {
-		ExerciseID  int `json:"exerciseId"`
-		Repetitions int `json:"repetitions"`
-		Weight      int `json:"weight"`
+		ExerciseID  int    `json:"exerciseId"`
+		Repetitions int    `json:"repetitions"`
+		Weight      int    `json:"weight"`
+		Note        string `json:"note"`
 	}
 
 	var b body
@@ -702,7 +705,7 @@ func (a *application) handleUpdateSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.db.updateSet(
-		r.Context(), id, b.ExerciseID, b.Repetitions, b.Weight,
+		r.Context(), id, b.ExerciseID, b.Repetitions, b.Weight, strings.TrimSpace(b.Note),
 	); err != nil {
 		l.Err(err).Msg("Failed to update existing set.")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -972,12 +975,13 @@ func (d *database) deleteWorkout(ctx context.Context, id int) error {
 }
 
 type setRow struct {
-	ID                   int    `db:"id"`
-	ExerciseID           int    `db:"exercise_id"`
-	ExerciseName         string `db:"exercise_name"`
-	DoneSecondsUnixEpoch int    `db:"done_seconds_unix_epoch"`
-	Repetitions          int    `db:"repetitions"`
-	Weight               int    `db:"weight"`
+	ID                   int     `db:"id"`
+	ExerciseID           int     `db:"exercise_id"`
+	ExerciseName         string  `db:"exercise_name"`
+	DoneSecondsUnixEpoch int     `db:"done_seconds_unix_epoch"`
+	Repetitions          int     `db:"repetitions"`
+	Weight               int     `db:"weight"`
+	Note                 *string `db:"note"`
 }
 
 // setsByWorkoutID returns all sets that belong to the workout with the given ID.
@@ -992,7 +996,8 @@ func (d *database) setsByWorkoutID(ctx context.Context, id int) ([]setRow, error
 			   e.name                 AS exercise_name,
 			   UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
 			   es.repetitions,
-			   es.weight
+			   es.weight,
+			   es.note
 		  FROM exercise_set AS es
 			   JOIN
 			   exercise     AS e ON es.exercise_id = e.id
@@ -1048,7 +1053,8 @@ func (d *database) setById(ctx context.Context, id int) (setRow, error) {
 			   e.name                 AS exercise_name,
 			   UNIXEPOCH(es.date_utc) AS done_seconds_unix_epoch,
 			   es.repetitions,
-			   es.weight
+			   es.weight,
+			   es.note
 		  FROM exercise_set AS es
 			   JOIN
 			   exercise     AS e ON es.exercise_id = e.id
@@ -1095,22 +1101,31 @@ func (d *database) createSet(
 	exerciseID,
 	repetitions,
 	weight int,
+	note string,
 ) error {
 	const query = `
 		INSERT INTO exercise_set (exercise_id,
 								  workout_id,
 								  date_utc,
 								  repetitions,
-								  weight)
+								  weight,
+		                          note)
 		VALUES (?,
 				?,
 				DATETIME('now'),
 				?,
-				?)
+				?,
+		        ?)
 	`
 
+	var trimmedNote *string
+
+	if v := strings.TrimSpace(note); v != "" {
+		trimmedNote = &v
+	}
+
 	if _, err := d.db.ExecContext(
-		ctx, query, exerciseID, workoutID, repetitions, weight,
+		ctx, query, exerciseID, workoutID, repetitions, weight, trimmedNote,
 	); err != nil {
 		return err
 	}
@@ -1129,17 +1144,25 @@ func (d *database) updateSet(
 	exerciseID,
 	repetitions,
 	weight int,
+	note string,
 ) error {
 	const query = `
 		UPDATE
 			exercise_set
 		   SET exercise_id = ?,
 			   repetitions = ?,
-			   weight      = ?
+			   weight      = ?,
+			   note        = ?
 		 WHERE id = ?
 	`
 
-	if _, err := d.db.ExecContext(ctx, query, exerciseID, repetitions, weight, id); err != nil {
+	var trimmedNote *string
+
+	if v := strings.TrimSpace(note); v != "" {
+		trimmedNote = &v
+	}
+
+	if _, err := d.db.ExecContext(ctx, query, exerciseID, repetitions, weight, trimmedNote, id); err != nil {
 		return err
 	}
 
