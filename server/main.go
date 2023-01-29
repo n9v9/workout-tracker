@@ -150,6 +150,10 @@ func (a *application) run(ctx context.Context, addr string) {
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		log.Err(err).Msg("Failed running HTTP Server ListenAndServe.")
 	}
+
+	if err := a.db.db.Close(); err != nil {
+		log.Err(err).Msg("Failed to close database connection.")
+	}
 }
 
 func (a *application) routes() {
