@@ -261,7 +261,12 @@
 <div class="field">
     <label for="note" class="label">Notiz</label>
     <div class="control">
-        <span id="note" class="textarea" contenteditable="true" role="textbox">{inputNote}</span>
+        <span
+            id="note"
+            class="textarea"
+            contenteditable="true"
+            role="textbox"
+            bind:innerHTML={inputNote}>{inputNote}</span>
     </div>
 </div>
 
