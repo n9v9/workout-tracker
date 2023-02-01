@@ -182,8 +182,8 @@ func (a *application) routes() {
 	// when emitting logs from the handlers.
 	//
 	// Because of the way routing in chi works, this function cannot be a middleware,
-	// but instead has to be attached to a router with the `With` method. Otherwise the URL params
-	// woul only be visible after the handler has executed.
+	// but instead has to be attached to a router with the `With` method. Otherwise, the URL params
+	// would only be visible after the handler has executed.
 	logURLParams := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			logParams := zerolog.Dict()
@@ -268,7 +268,7 @@ func (a *application) routes() {
 	api.Get("/statistics", a.handleStatistics)
 }
 
-// exerciseMustExist checks that the requested URL has an URL parameter with the given name,
+// exerciseMustExist checks that the requested URL has a URL parameter with the given name,
 // extracts it and checks if an exercise with the extracted ID exists. If it does, the wrapped
 // handler will be called.
 //
@@ -299,7 +299,7 @@ func (a *application) exerciseMustExist(parameter string) func(http.Handler) htt
 	}
 }
 
-// workoutMustExist checks that the requested URL has an URL parameter with the given name,
+// workoutMustExist checks that the requested URL has a URL parameter with the given name,
 // extracts it and checks if a workout with the extracted ID exists. If it does, the wrapped
 // handler will be called.
 //
@@ -330,7 +330,7 @@ func (a *application) workoutMustExist(parameter string) func(http.Handler) http
 	}
 }
 
-// setMustExist checks that the requested URL has an URL parameter with the given name,
+// setMustExist checks that the requested URL has a URL parameter with the given name,
 // extracts it and checks if a set with the extracted ID exists. If it does, the wrapped
 // handler will be called.
 //
@@ -793,7 +793,6 @@ func writeJSON(w http.ResponseWriter, r *http.Request, data any) {
 // readJSON decodes the request body into data.
 // If reading fails, http.StatusBadRequest will be set and false will be returned.
 func readJSON(w http.ResponseWriter, r *http.Request, data any) bool {
-	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		hlog.FromRequest(r).Warn().Err(err).Msg("Failed to decode JSON body.")
 		w.WriteHeader(http.StatusBadRequest)
@@ -1029,7 +1028,7 @@ func (d *database) exercises(ctx context.Context) ([]exerciseRow, error) {
 		SELECT id,
 			   name
 		  FROM exercise
-		 ORDER BY name ASC
+		 ORDER BY name
 	`
 
 	var exercises []exerciseRow
