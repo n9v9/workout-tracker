@@ -19,18 +19,20 @@
     let inputNote = "";
 
     let inputWeightElement: HTMLInputElement;
+    // Used to enter a new exercise name and to update an existing name.
     let inputExerciseNameElement: HTMLInputElement;
     let inputExerciseName = "";
 
     let canSave = false;
     let showDeleteModal = false;
     let showAddExerciseModal = false;
+    let showChangeExerciseModal = false;
     let showDeleteExerciseModal = false;
     let showCannotDeleteExerciseModal = false;
     let exerciseInSetsCount = 0;
 
-    let canSaveNewExercise = false;
-    let exerciseExists = false;
+    let canSaveOrUpdateExercise = false;
+    let exerciseNameExists = false;
     let existingExercises: string[] = [];
 
     onMount(load);
@@ -52,8 +54,8 @@
         showCannotDeleteExerciseModal = false;
         exerciseInSetsCount = 0;
 
-        canSaveNewExercise = false;
-        exerciseExists = false;
+        canSaveOrUpdateExercise = false;
+        exerciseNameExists = false;
         existingExercises = [];
     }
 
@@ -108,19 +110,25 @@
         input.select();
     }
 
+    async function exerciseExists(name: string): Promise<boolean> {
+        name = name.trim().toLowerCase();
+
+        if ((await api.existsExercise(name)).exists) {
+            existingExercises.push(name);
+            canSaveOrUpdateExercise = false;
+            exerciseNameExists = true;
+            return true;
+        }
+
+        return false;
+    }
+
     async function createExercise() {
-        const name = inputExerciseName.trim();
-        const lowerName = name.toLowerCase();
-
-        exerciseExists = (await api.existsExercise(lowerName)).exists;
-
-        if (exerciseExists) {
-            existingExercises.push(lowerName);
-            canSaveNewExercise = false;
+        if (await exerciseExists(inputExerciseName)) {
             return;
         }
 
-        const { id } = await api.createExercise(name);
+        const { id } = await api.createExercise(inputExerciseName);
         showAddExerciseModal = false;
 
         // Reload this component, then set the exercise ID to the ID
@@ -129,20 +137,34 @@
         inputExerciseId = id;
     }
 
-    async function onNewExerciseKeyUp(event: KeyboardEvent) {
-        const lowerName = inputExerciseName.trim().toLowerCase();
-
-        if (existingExercises.includes(lowerName)) {
-            exerciseExists = true;
-            canSaveNewExercise = false;
+    async function updateExercise() {
+        if (await exerciseExists(inputExerciseName)) {
             return;
         }
 
-        exerciseExists = false;
-        canSaveNewExercise = lowerName !== "";
+        const { id } = await api.updateExercise(inputExerciseId, inputExerciseName);
+        showChangeExerciseModal = false;
 
-        if (event.key === "Enter" && canSaveNewExercise) {
-            await createExercise();
+        // Reload this component, then set the exercise ID to the ID
+        // of the newly created exercise.
+        await load();
+        inputExerciseId = id;
+    }
+
+    async function updateOrCreateExerciseKeyUp(event: KeyboardEvent, action: () => Promise<void>) {
+        const lowerName = inputExerciseName.trim().toLowerCase();
+
+        if (existingExercises.includes(lowerName)) {
+            exerciseNameExists = true;
+            canSaveOrUpdateExercise = false;
+            return;
+        }
+
+        exerciseNameExists = false;
+        canSaveOrUpdateExercise = lowerName !== "";
+
+        if (event.key === "Enter" && canSaveOrUpdateExercise) {
+            await action();
         }
     }
 
@@ -197,6 +219,18 @@
                             }}>
                             <span class="icon">
                                 <i class="bi bi-plus-lg" />
+                            </span>
+                        </Button>
+                    </p>
+                    <p class="control">
+                        <Button
+                            classes="button"
+                            click={() => {
+                                showChangeExerciseModal = true;
+                                setTimeout(() => inputExerciseNameElement.focus(), 0);
+                            }}>
+                            <span class="icon">
+                                <i class="bi bi-pencil" />
                             </span>
                         </Button>
                     </p>
@@ -310,14 +344,14 @@
         confirm={{
             text: "Speichern",
             click: createExercise,
-            canClick: canSaveNewExercise,
+            canClick: canSaveOrUpdateExercise,
         }}
         cancel={{
             text: "Abbrechen",
             click: () => {
                 showAddExerciseModal = false;
                 inputExerciseName = "";
-                exerciseExists = false;
+                exerciseNameExists = false;
             },
         }}>
         <div class="field">
@@ -330,11 +364,42 @@
                         type="text"
                         bind:this={inputExerciseNameElement}
                         bind:value={inputExerciseName}
-                        on:keyup={onNewExerciseKeyUp}
+                        on:keyup={e => updateOrCreateExerciseKeyUp(e, createExercise)}
                         placeholder="z. B. Squats"
                         enterkeyhint="send" />
                 </div>
-                <p class="{!exerciseExists ? 'is-hidden' : ''} help is-danger"
+                <p class="{!exerciseNameExists ? 'is-hidden' : ''} help is-danger"
+                    >Diese Übung existiert bereits.</p>
+            </div>
+        </div>
+    </Modal>
+{:else if showChangeExerciseModal}
+    <Modal
+        title="Übung bearbeiten"
+        confirm={{ text: "Speichern", click: updateExercise, canClick: canSaveOrUpdateExercise }}
+        cancel={{
+            text: "Abbrechen",
+            click: () => {
+                showChangeExerciseModal = false;
+                inputExerciseName = "";
+                exerciseNameExists = false;
+            },
+        }}>
+        <div class="field">
+            <label for="changed-exercise-name" class="label">Neuer Name</label>
+            <div class="field">
+                <div class="control">
+                    <input
+                        id="changed-exercise-name"
+                        class="input"
+                        type="text"
+                        bind:this={inputExerciseNameElement}
+                        bind:value={inputExerciseName}
+                        on:keyup={e => updateOrCreateExerciseKeyUp(e, updateExercise)}
+                        placeholder="z. B. Squats"
+                        enterkeyhint="send" />
+                </div>
+                <p class="{!exerciseNameExists ? 'is-hidden' : ''} help is-danger"
                     >Diese Übung existiert bereits.</p>
             </div>
         </div>

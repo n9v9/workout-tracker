@@ -231,6 +231,7 @@ func (a *application) routes() {
 	api.Group(func(r chi.Router) {
 		r.Use(a.exerciseMustExist(paramExerciseID))
 
+		r.Put(fmt.Sprintf("/exercises/{%s}", paramExerciseID), a.handleUpdateExercise)
 		r.Delete(fmt.Sprintf("/exercises/{%s}", paramExerciseID), a.handleDeleteExercise)
 		r.Get(fmt.Sprintf("/exercises/{%s}/count", paramExerciseID), a.handleGetExerciseCountInSets)
 	})
@@ -522,6 +523,37 @@ func (a *application) handleGetExerciseCountInSets(w http.ResponseWriter, r *htt
 	}
 
 	writeJSON(w, r, response{Count: count})
+}
+
+func (a *application) handleUpdateExercise(w http.ResponseWriter, r *http.Request) {
+	id, ok := paramInt(w, r, paramExerciseID)
+	if !ok {
+		return
+	}
+
+	type body struct {
+		Name string `json:"name"`
+	}
+
+	var b body
+
+	if !readJSON(w, r, &b) {
+		return
+	}
+
+	exercise, err := a.db.updateExercise(r.Context(), int64(id), b.Name)
+	if err != nil {
+		hlog.FromRequest(r).Err(err).Msg("Failed to update exercise.")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	}
+
+	writeJSON(w, r, response(exercise))
 }
 
 func (a *application) handleGetWorkoutList(w http.ResponseWriter, r *http.Request) {
@@ -1327,12 +1359,32 @@ func (d *database) createExercise(ctx context.Context, name string) (exerciseRow
 		VALUES (?)
 	`
 
-	result, err := d.db.ExecContext(ctx, query, name)
+	result, err := d.db.ExecContext(ctx, query, strings.TrimSpace(name))
 	if err != nil {
 		return exerciseRow{}, err
 	}
 
 	id, err := result.LastInsertId()
+	if err != nil {
+		return exerciseRow{}, err
+	}
+
+	return exerciseRow{ID: id, Name: name}, nil
+}
+
+// updateExercise changes the name of an existing exercise.
+//
+// # Errors
+//
+// Returns an underlying SQL error.
+func (d *database) updateExercise(ctx context.Context, id int64, name string) (exerciseRow, error) {
+	const query = `
+		UPDATE exercise
+		   SET name = ?
+		 WHERE id = ?
+	`
+
+	_, err := d.db.ExecContext(ctx, query, strings.TrimSpace(name), id)
 	if err != nil {
 		return exerciseRow{}, err
 	}
@@ -1355,7 +1407,7 @@ func (d *database) existsExerciseName(ctx context.Context, name string) (bool, e
 	// Don't care about this value, just care about the existence.
 	var tmp string
 
-	err := d.db.QueryRowxContext(ctx, query, name).Scan(&tmp)
+	err := d.db.QueryRowxContext(ctx, query, strings.TrimSpace(name)).Scan(&tmp)
 
 	if err == nil {
 		return true, nil

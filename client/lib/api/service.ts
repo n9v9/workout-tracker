@@ -139,6 +139,13 @@ class ApiService {
         });
     }
 
+    async updateExercise(id: number, name: string): Promise<Exercise> {
+        return await this.getJson<Exercise>(`exercises/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ name }),
+        });
+    }
+
     async deleteExercise(id: number): Promise<void> {
         await this.getJson<void>(
             `exercises/${id}`,
