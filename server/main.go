@@ -184,31 +184,9 @@ func (a *application) routes() {
 	logging := alice.New(
 		hlog.NewHandler(log.Logger),
 		hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
+			//
 			// This function will be called after the request has been served.
-			hlog.FromRequest(r).Info().
-				Int("size", size).
-				Int("status", status).
-				Dur("duration", duration).
-				Send()
-		}),
-		hlog.MethodHandler("method"),
-		hlog.URLHandler("url"),
-		hlog.RemoteAddrHandler("ip"),
-		hlog.RequestIDHandler("request_id", ""),
-	)
-
-	a.router.Use(func(h http.Handler) http.Handler {
-		return logging.Then(h)
-	})
-
-	// Add URL parameters to the logging context. That way, URL parameters are als logged
-	// when emitting logs from the handlers.
-	//
-	// Because of the way routing in chi works, this function cannot be a middleware,
-	// but instead has to be attached to a router with the `With` method. Otherwise, the URL params
-	// would only be visible after the handler has executed.
-	logURLParams := func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			//
 			logParams := zerolog.Dict()
 			urlParams := chi.RouteContext(r.Context()).URLParams
 
@@ -221,13 +199,22 @@ func (a *application) routes() {
 				logParams.Str(key, value)
 			}
 
-			hlog.FromRequest(r).UpdateContext(func(c zerolog.Context) zerolog.Context {
-				return c.Dict("url_params", logParams)
-			})
+			hlog.FromRequest(r).Info().
+				Int("size", size).
+				Int("status", status).
+				Dur("duration", duration).
+				Dict("url_params", logParams).
+				Send()
+		}),
+		hlog.MethodHandler("method"),
+		hlog.URLHandler("url"),
+		hlog.RemoteAddrHandler("ip"),
+		hlog.RequestIDHandler("request_id", ""),
+	)
 
-			h.ServeHTTP(w, r)
-		})
-	}
+	a.router.Use(func(h http.Handler) http.Handler {
+		return logging.Then(h)
+	})
 
 	//
 	// Static files handlers
@@ -241,7 +228,7 @@ func (a *application) routes() {
 	//
 	// API handlers
 	//
-	api := chi.NewRouter().With(logURLParams)
+	api := chi.NewRouter()
 	a.router.Mount("/api", api)
 
 	//
