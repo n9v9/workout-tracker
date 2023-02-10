@@ -13,14 +13,14 @@ type SetRepository interface {
 	// # Errors
 	//
 	// Returns either [database/sql.ErrNoRows] or another, underlying SQL error.
-	ByID(ctx context.Context, id int64) (SetEntity, error)
+	FindByID(ctx context.Context, id int64) (SetEntity, error)
 
 	// ByWorkoutID returns all sets that belong to the workout with the given ID.
 	//
 	// # Errors
 	//
 	// Returns an underlying SQL error.
-	ByWorkoutID(ctx context.Context, id int64) ([]SetEntity, error)
+	FindByWorkoutID(ctx context.Context, id int64) ([]SetEntity, error)
 
 	// Create creates a set with the given values.
 	//
@@ -78,7 +78,7 @@ func NewSetRepository(db *sqlx.DB) SetRepository {
 	return &setRepository{db}
 }
 
-func (sr *setRepository) ByID(ctx context.Context, id int64) (SetEntity, error) {
+func (sr *setRepository) FindByID(ctx context.Context, id int64) (SetEntity, error) {
 	const query = `
 		SELECT es.id,
 			   es.exercise_id,
@@ -103,7 +103,7 @@ func (sr *setRepository) ByID(ctx context.Context, id int64) (SetEntity, error) 
 	return entity, nil
 }
 
-func (sr *setRepository) ByWorkoutID(ctx context.Context, id int64) ([]SetEntity, error) {
+func (sr *setRepository) FindByWorkoutID(ctx context.Context, id int64) ([]SetEntity, error) {
 	const query = `
 		SELECT es.id,
 			   es.exercise_id,

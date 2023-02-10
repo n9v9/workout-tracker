@@ -12,12 +12,12 @@ import (
 var ErrExerciseExists = errors.New("exercise exists in at least one set")
 
 type ExerciseRepository interface {
-	// All returns all exercises.
+	// FindAll returns all exercises.
 	//
 	// # Errors
 	//
 	// Returns an underlying SQL error.
-	All(ctx context.Context) ([]ExerciseEntity, error)
+	FindAll(ctx context.Context) ([]ExerciseEntity, error)
 
 	// UsageInSets returns the number of times the exercise with
 	// the given id is used in sets.
@@ -77,7 +77,7 @@ func NewExerciseRepository(db *sqlx.DB) ExerciseRepository {
 	return &exerciseRepository{db}
 }
 
-func (er *exerciseRepository) All(ctx context.Context) ([]ExerciseEntity, error) {
+func (er *exerciseRepository) FindAll(ctx context.Context) ([]ExerciseEntity, error) {
 	const query = `
                SELECT id,
                           name

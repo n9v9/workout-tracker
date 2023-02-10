@@ -35,7 +35,7 @@ type WorkoutRepository interface {
 	// # Errors
 	//
 	// Returns an underlying SQL error.
-	All(ctx context.Context) ([]WorkoutEntity, error)
+	FindAll(ctx context.Context) ([]WorkoutEntity, error)
 
 	// RecommendNewSet returns recommended values for a new set.
 	//
@@ -123,7 +123,7 @@ func (wr *workoutRepository) Exists(ctx context.Context, id int64) (bool, error)
 	return count == 1, nil
 }
 
-func (wr *workoutRepository) All(ctx context.Context) ([]WorkoutEntity, error) {
+func (wr *workoutRepository) FindAll(ctx context.Context) ([]WorkoutEntity, error) {
 	const query = `
 		SELECT id,
 			   UNIXEPOCH(start_date_utc) AS start_seconds_unix_epoch
