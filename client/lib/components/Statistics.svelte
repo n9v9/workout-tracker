@@ -106,7 +106,7 @@
             class="card-header"
             on:click={() => (showDetailView = !showDetailView)}
             on:keypress={() => (showDetailView = !showDetailView)}>
-            <p class="card-header-title">Detailansicht</p>
+            <p class="card-header-title">🚧 Detailansicht</p>
             <button class="card-header-icon">
                 <span class="icon">
                     <i class="bi bi-chevron-{showDetailView ? 'down' : 'right'}" />

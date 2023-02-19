@@ -16,7 +16,9 @@ use crate::dal;
 
 use self::{
     requests::{CreateUpdateExercise, CreateUpdateExerciseSet},
-    responses::{Exercise, ExerciseSet, Workout},
+    responses::{
+        Exercise, ExerciseCount, ExerciseSet, SetRecommendation, StatisticsOverview, Workout,
+    },
 };
 
 static STATIC_FILES: Dir<'_> = include_dir!("../client/dist");
@@ -50,6 +52,10 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
             "/workouts/:id/sets",
             get(get_exercise_sets_by_workout_id).route_layer(check_workout_exists_layer()),
         )
+        .route(
+            "/workouts/:id/sets/recommendation",
+            get(get_set_recommendation),
+        )
         .route("/exercises", get(get_exercises).post(create_exercise))
         .route(
             "/exercises/:id",
@@ -58,6 +64,7 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
                 .delete(delete_exercise)
                 .route_layer(check_exercise_exists_layer()),
         )
+        .route("/exercises/:id/count", get(get_exercise_count))
         .route("/sets", get(get_exercise_sets).post(create_exercise_set))
         .route(
             "/sets/:id",
@@ -65,7 +72,8 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
                 .put(update_exercise_set)
                 .delete(delete_exercise_set)
                 .route_layer(check_exercise_set_exists_layer()),
-        );
+        )
+        .route("/statistics", get(get_statistics_overview));
 
     let router = Router::new()
         .nest("/api", endpoints)
@@ -191,6 +199,14 @@ async fn delete_exercise(
         .ok_or_else(|| AppError::StatusCode(StatusCode::NOT_FOUND))
 }
 
+async fn get_exercise_count(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<responses::ExerciseCount>, AppError> {
+    let count = dal::get_exercise_count(&state.pool, id).await?;
+    Ok(Json(ExerciseCount::from(count)))
+}
+
 async fn get_workout(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -269,6 +285,7 @@ async fn create_exercise_set(
         exercise_set.exercise_id,
         exercise_set.repetitions,
         exercise_set.weight,
+        exercise_set.note,
     )
     .await?;
     Ok(Json(ExerciseSet::from(exercise_set)))
@@ -286,6 +303,7 @@ async fn update_exercise_set(
         exercise_set.exercise_id,
         exercise_set.repetitions,
         exercise_set.weight,
+        exercise_set.note,
     )
     .await?;
     Ok(Json(ExerciseSet::from(exercise_set)))
@@ -299,6 +317,21 @@ async fn delete_exercise_set(
         .await?
         .map(|_| StatusCode::NO_CONTENT)
         .ok_or_else(|| AppError::StatusCode(StatusCode::NOT_FOUND))
+}
+
+async fn get_set_recommendation(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<SetRecommendation>, AppError> {
+    let recommendation = dal::get_set_recommendation_for_workout(&state.pool, id).await?;
+    Ok(Json(SetRecommendation::from(recommendation)))
+}
+
+async fn get_statistics_overview(
+    State(state): State<AppState>,
+) -> Result<Json<StatisticsOverview>, AppError> {
+    let overview = dal::get_statistics_overview(&state.pool).await?;
+    Ok(Json(StatisticsOverview::from(overview)))
 }
 
 #[derive(Debug)]
@@ -340,17 +373,23 @@ mod requests {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct CreateUpdateExerciseSet {
+        #[serde(rename = "workoutId")]
         pub workout_id: i64,
+        #[serde(rename = "exerciseId")]
         pub exercise_id: i64,
         pub repetitions: i64,
         pub weight: i64,
+        pub note: String,
     }
 }
 
 mod responses {
     use serde::{Deserialize, Serialize};
 
-    use crate::dal::{ExerciseEntity, ExerciseSetEntity, WorkoutEntity};
+    use crate::dal::{
+        ExerciseCountEntity, ExerciseEntity, ExerciseSetEntity, SetRecommendationEntity,
+        StatisticsOverviewEntity, WorkoutEntity,
+    };
 
     #[derive(Debug, Deserialize, Serialize)]
     pub struct Exercise {
@@ -370,6 +409,7 @@ mod responses {
     #[derive(Debug, Deserialize, Serialize)]
     pub struct Workout {
         pub id: i64,
+        #[serde(rename = "createdUtcSeconds")]
         pub created_utc_s: i64,
     }
 
@@ -385,12 +425,17 @@ mod responses {
     #[derive(Debug, Deserialize, Serialize)]
     pub struct ExerciseSet {
         pub id: i64,
+        #[serde(rename = "exerciseId")]
         pub exercise_id: i64,
+        #[serde(rename = "exerciseName")]
         pub exercise_name: String,
+        #[serde(rename = "workoutId")]
         pub workout_id: i64,
+        #[serde(rename = "createdUtcSeconds")]
         pub created_utc_s: i64,
         pub repetitions: i64,
         pub weight: i64,
+        pub note: Option<String>,
     }
 
     impl From<ExerciseSetEntity> for ExerciseSet {
@@ -403,6 +448,65 @@ mod responses {
                 created_utc_s: value.created.timestamp(),
                 repetitions: value.repetitions,
                 weight: value.weight,
+                note: value.note,
+            }
+        }
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct SetRecommendation {
+        #[serde(rename = "exerciseId")]
+        pub exercise_id: i64,
+        pub repetitions: i64,
+        pub weight: i64,
+    }
+
+    impl From<SetRecommendationEntity> for SetRecommendation {
+        fn from(value: SetRecommendationEntity) -> Self {
+            Self {
+                exercise_id: value.exercise_id,
+                repetitions: value.repetitions,
+                weight: value.weight,
+            }
+        }
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct ExerciseCount {
+        pub count: i64,
+    }
+
+    impl From<ExerciseCountEntity> for ExerciseCount {
+        fn from(value: ExerciseCountEntity) -> Self {
+            Self { count: value.count }
+        }
+    }
+
+    #[derive(Debug, Serialize)]
+    pub struct StatisticsOverview {
+        #[serde(rename = "totalWorkouts")]
+        total_workouts: i64,
+        #[serde(rename = "totalDurationSeconds")]
+        total_duration_s: i64,
+        #[serde(rename = "avgDurationSeconds")]
+        avg_duration_s: i64,
+        #[serde(rename = "totalSets")]
+        total_sets: i64,
+        #[serde(rename = "totalReps")]
+        total_repetitions: i64,
+        #[serde(rename = "avgRepsPerSet")]
+        avg_repetitions_per_set: i64,
+    }
+
+    impl From<StatisticsOverviewEntity> for StatisticsOverview {
+        fn from(value: StatisticsOverviewEntity) -> Self {
+            Self {
+                total_workouts: value.total_workouts,
+                total_duration_s: value.total_duration_s,
+                avg_duration_s: value.avg_duration_s,
+                total_sets: value.total_sets,
+                total_repetitions: value.total_repetitions,
+                avg_repetitions_per_set: value.avg_repetitions_per_set,
             }
         }
     }

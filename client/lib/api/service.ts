@@ -11,9 +11,10 @@ import type {
 
 type SetEntity = {
     id: number;
+    workoutId: number;
     exerciseId: number;
     exerciseName: string;
-    doneSecondsUnixEpoch: number;
+    createdUtcSeconds: number;
     repetitions: number;
     weight: number;
     note: string | null;
@@ -25,12 +26,17 @@ class ApiService {
     async getWorkoutList(): Promise<Workout[]> {
         type WorkoutEntity = {
             id: number;
-            startSecondsUnixEpoch: number;
+            createdUtcSeconds: number;
         };
-        return (await this.getJson<WorkoutEntity[]>(`workouts`)).map(x => ({
+
+        const workouts = (await this.getJson<WorkoutEntity[]>(`workouts`)).map(x => ({
             id: x.id,
-            started: new Date(x.startSecondsUnixEpoch * 1000),
+            started: new Date(x.createdUtcSeconds * 1000),
         }));
+
+        workouts.sort((a, b) => b.started.getTime() - a.started.getTime());
+
+        return workouts;
     }
 
     async deleteWorkout(id: number): Promise<void> {
@@ -58,7 +64,7 @@ class ApiService {
             exerciseName: x.exerciseName,
             repetitions: x.repetitions,
             weight: x.weight,
-            date: new Date(x.doneSecondsUnixEpoch * 1000),
+            date: new Date(x.createdUtcSeconds * 1000),
             note: x.note ?? "",
         }));
     }
@@ -76,7 +82,7 @@ class ApiService {
             exerciseName: set.exerciseName,
             repetitions: set.repetitions,
             weight: set.weight,
-            date: new Date(set.doneSecondsUnixEpoch * 1000),
+            date: new Date(set.createdUtcSeconds * 1000),
             note: set.note,
         };
     }
@@ -86,10 +92,13 @@ class ApiService {
 
         if (setId === null) {
             promise = this.getJson(
-                `workouts/${workoutId}/sets`,
+                `sets`,
                 {
                     method: "POST",
-                    body: JSON.stringify(set),
+                    body: JSON.stringify({
+                        workoutId,
+                        ...set,
+                    }),
                 },
                 false,
             );
@@ -98,7 +107,10 @@ class ApiService {
                 `sets/${setId}`,
                 {
                     method: "PUT",
-                    body: JSON.stringify(set),
+                    body: JSON.stringify({
+                        workoutId,
+                        ...set,
+                    }),
                 },
                 false,
             );
@@ -125,11 +137,18 @@ class ApiService {
         return await this.getJson<Statistics>("statistics");
     }
 
-    async existsExercise(name: string): Promise<ExerciseExists> {
-        return await this.getJson<ExerciseExists>("exercises/exists", {
-            method: "POST",
-            body: JSON.stringify({ name }),
-        });
+    async existsExercise(name: string): Promise<boolean> {
+        name = name.toLowerCase().trim();
+
+        const exercises = await this.getExercises();
+
+        for (const exercise of exercises) {
+            if (exercise.name.toLowerCase().trim() == name) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     async createExercise(name: string): Promise<Exercise> {

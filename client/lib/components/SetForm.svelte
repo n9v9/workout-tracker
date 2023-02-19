@@ -72,7 +72,9 @@
         inputExerciseId = set.exerciseId;
         inputRepetitions = set.repetitions.toString();
         inputWeight = set.weight.toString();
-        inputNote = set.note || "";
+        // Svelte does not support `bind:innerText` so we have to do this manually.
+        // This way, we keep new lines correctly.
+        (document.querySelector("#note") as HTMLElement).innerText = set.note || "";
 
         checkCanSave();
     }
@@ -86,11 +88,15 @@
     }
 
     async function save() {
+        // Svelte does not support `bind:innerText` so we have to do this manually.
+        // This way, we keep new lines correctly.
+        const noteText = (document.querySelector("#note") as HTMLElement).innerText.trim();
+
         await api.createOrUpdateSet(workoutId, setId, {
             exerciseId: inputExerciseId,
             repetitions: parseInt(inputRepetitions),
             weight: parseInt(inputWeight),
-            note: inputNote.trim(),
+            note: noteText,
         });
 
         goBack();
@@ -113,7 +119,7 @@
     async function exerciseExists(name: string): Promise<boolean> {
         name = name.trim().toLowerCase();
 
-        if ((await api.existsExercise(name)).exists) {
+        if (await api.existsExercise(name)) {
             existingExercises.push(name);
             canSaveOrUpdateExercise = false;
             exerciseNameExists = true;
@@ -227,6 +233,9 @@
                             classes="button"
                             click={() => {
                                 showChangeExerciseModal = true;
+                                inputExerciseName = exercises.find(
+                                    x => x.id === inputExerciseId,
+                                ).name;
                                 setTimeout(() => inputExerciseNameElement.focus(), 0);
                             }}>
                             <span class="icon">

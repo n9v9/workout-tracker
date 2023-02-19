@@ -34,10 +34,6 @@ export type Statistics = {
     avgRepsPerSet: number;
 };
 
-export type ExerciseExists = {
-    exists: boolean;
-};
-
 export type ExerciseCountInSets = {
     count: number;
 };

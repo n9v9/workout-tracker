@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::{DateTime, Duration, Utc};
 use sqlx::{FromRow, Pool, Sqlite};
 
 #[derive(Debug, FromRow)]
@@ -15,15 +16,46 @@ pub struct WorkoutEntity {
 }
 
 #[derive(Debug, FromRow)]
+pub struct SetRecommendationEntity {
+    pub exercise_id: i64,
+    pub repetitions: i64,
+    pub weight: i64,
+}
+
+#[derive(Debug, FromRow)]
 pub struct ExerciseSetEntity {
     pub id: i64,
     pub exercise_id: i64,
     pub exercise_name: String,
     pub workout_id: i64,
     #[sqlx(rename = "created_utc_s")]
-    pub created: chrono::DateTime<chrono::Utc>,
+    pub created: DateTime<Utc>,
     pub repetitions: i64,
     pub weight: i64,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, FromRow)]
+pub struct ExerciseCountEntity {
+    pub count: i64,
+}
+
+#[derive(Debug, Default, FromRow)]
+pub struct StatisticsOverviewEntity {
+    pub total_workouts: i64,
+    pub total_duration_s: i64,
+    pub avg_duration_s: i64,
+    pub total_sets: i64,
+    pub total_repetitions: i64,
+    pub avg_repetitions_per_set: i64,
+}
+
+pub async fn get_exercise_count(pool: &Pool<Sqlite>, id: i64) -> Result<ExerciseCountEntity> {
+    sqlx::query_as("SELECT COUNT(*) AS count FROM exercise_set WHERE exercise_id = ?")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("Failed to get exercise count for exercise with id {id}"))
 }
 
 pub async fn get_exercise(pool: &Pool<Sqlite>, id: i64) -> Result<Option<ExerciseEntity>> {
@@ -35,7 +67,7 @@ pub async fn get_exercise(pool: &Pool<Sqlite>, id: i64) -> Result<Option<Exercis
 }
 
 pub async fn get_exercises(pool: &Pool<Sqlite>) -> Result<Vec<ExerciseEntity>> {
-    sqlx::query_as("SELECT id, name FROM exercise")
+    sqlx::query_as("SELECT id, name FROM exercise ORDER BY name")
         .fetch_all(pool)
         .await
         .context("Failed to get exercises")
@@ -112,7 +144,7 @@ fn create_get_exercise_query(constraint: Option<ExerciseSetConstraint>) -> Strin
     const GET_ALL_EXERCISES_QUERY: &str = "
     SELECT
         es.id, es.exercise_id, e.name AS exercise_name,
-        es.workout_id, es.created_utc_s, es.repetitions, es.weight
+        es.workout_id, es.created_utc_s, es.repetitions, es.weight, es.note
     FROM exercise_set es
     JOIN exercise e ON es.exercise_id = e.id
 ";
@@ -165,32 +197,40 @@ pub async fn create_or_update_exercise_set(
     exercise_id: i64,
     repetitions: i64,
     weight: i64,
+    note: String,
 ) -> Result<ExerciseSetEntity> {
     let query = match exercise_set_id {
         Some(_) => {
             "
             UPDATE exercise_set
-            SET workout_id = ?, exercise_id = ?, repetitions = ?, weight = ?
+            SET workout_id = ?, exercise_id = ?, repetitions = ?, weight = ?, note = ?
             WHERE id = ?
-            RETURNING id, exercise_id, workout_id, created_utc_s, repetitions, weight,
+            RETURNING id, exercise_id, workout_id, created_utc_s, repetitions, weight, note,
                 '' AS exercise_name
             "
         }
         None => {
             "
-            INSERT INTO exercise_set (workout_id, exercise_id, repetitions, weight, created_utc_s)
-            VALUES (?, ?, ?, ?, UNIXEPOCH(datetime()))
-            RETURNING id, exercise_id, workout_id, created_utc_s, repetitions, weight,
+            INSERT INTO exercise_set (workout_id, exercise_id, repetitions, weight, note, created_utc_s)
+            VALUES (?, ?, ?, ?, ?, UNIXEPOCH(datetime()))
+            RETURNING id, exercise_id, workout_id, created_utc_s, repetitions, weight, note,
                 '' AS exercise_name
             "
         }
+    };
+
+    // Empty notes are stored as NULL in the database.
+    let note = match note.trim() {
+        "" => None,
+        note => Some(note),
     };
 
     let mut query = sqlx::query_as::<_, ExerciseSetEntity>(query)
         .bind(workout_id)
         .bind(exercise_id)
         .bind(repetitions)
-        .bind(weight);
+        .bind(weight)
+        .bind(note);
 
     if let Some(id) = exercise_set_id {
         query = query.bind(id);
@@ -218,4 +258,112 @@ pub async fn delete_exercise_set(pool: &Pool<Sqlite>, id: i64) -> Result<Option<
         .await
         .map(|res| (res.rows_affected() > 0).then_some(()))
         .with_context(|| format!("Failed to delete exercise set with id {id}"))
+}
+
+pub async fn get_set_recommendation_for_workout(
+    pool: &Pool<Sqlite>,
+    id: i64,
+) -> Result<SetRecommendationEntity> {
+    // Just recommend the last set again.
+    let recommendation = sqlx::query_as::<_, SetRecommendationEntity>(
+        "
+        SELECT exercise_id, repetitions, weight
+        FROM exercise_set
+        WHERE workout_id = ?
+        ORDER BY created_utc_s DESC
+        LIMIT 1
+        ",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(set) = recommendation {
+        return Ok(set);
+    }
+
+    // Suggest the first set of the last workout that has sets.
+    let recommendation = sqlx::query_as::<_, SetRecommendationEntity>(
+        "
+        SELECT exercise_id, repetitions, weight
+        FROM exercise_set
+        WHERE workout_id = (
+            SELECT MAX(w.id)
+            FROM workout w
+            JOIN exercise_set es ON w.id = es.workout_id
+        )
+        ORDER BY created_utc_s
+        LIMIT 1
+        ",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(set) = recommendation {
+        return Ok(set);
+    }
+
+    // Just return some sane defaults.
+    Ok(SetRecommendationEntity {
+        exercise_id: 0,
+        repetitions: 0,
+        weight: 0,
+    })
+}
+
+pub async fn get_statistics_overview(pool: &Pool<Sqlite>) -> Result<StatisticsOverviewEntity> {
+    #[derive(Debug, FromRow)]
+    struct DatesRow {
+        start_utc_s: i64,
+        end_utc_s: i64,
+    }
+
+    let workouts = sqlx::query_as::<_, DatesRow>(
+        "
+        SELECT w.started_utc_s AS start_utc_s, MAX(es.created_utc_s) AS end_utc_s
+        FROM exercise_set es
+        JOIN workout w on es.workout_id = w.id
+        GROUP BY w.id
+        ",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    if workouts.is_empty() {
+        return Ok(Default::default());
+    }
+
+    let mut overview = StatisticsOverviewEntity {
+        total_workouts: workouts.len() as i64,
+        total_duration_s: workouts.iter().map(|w| w.end_utc_s - w.start_utc_s).sum(),
+        ..Default::default()
+    };
+
+    overview.avg_duration_s = overview.total_duration_s / overview.total_workouts;
+
+    #[derive(Debug, FromRow)]
+    struct SetsRepsRow {
+        total_sets: i64,
+        total_repetitions: i64,
+        avg_repetitions_per_set: i64,
+    }
+
+    let sets_reps = sqlx::query_as::<_, SetsRepsRow>(
+        "
+        SELECT
+            COUNT(id) AS total_sets,
+            SUM(repetitions) AS total_repetitions,
+            CAST(AVG(repetitions) AS INT) AS avg_repetitions_per_set
+        FROM exercise_set
+        ",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    overview.total_sets = sets_reps.total_sets;
+    overview.total_repetitions = sets_reps.total_repetitions;
+    overview.avg_repetitions_per_set = sets_reps.avg_repetitions_per_set;
+
+    Ok(overview)
 }

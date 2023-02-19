@@ -15,6 +15,7 @@ CREATE TABLE exercise_set (
     created_utc_s integer NOT NULL,
     repetitions   integer NOT NULL,
     weight        integer NOT NULL,
+    note          text,
 
     FOREIGN KEY (exercise_id) REFERENCES exercise (id),
     FOREIGN KEY (workout_id) REFERENCES workout (id) ON DELETE CASCADE
