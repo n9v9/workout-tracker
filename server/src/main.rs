@@ -40,7 +40,7 @@ async fn main() {
 
 fn setup_tracing() {
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
+        std::env::set_var("RUST_LOG", "server=trace,tower_http=trace");
     }
 
     tracing_subscriber::fmt()

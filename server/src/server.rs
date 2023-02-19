@@ -6,10 +6,16 @@ use axum::{
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router, Server,
+    Json, Router, Server, ServiceExt,
 };
 use include_dir::{include_dir, Dir};
 use sqlx::{Pool, Sqlite};
+use tower::ServiceBuilder;
+use tower_http::{
+    request_id::MakeRequestUuid,
+    trace::{DefaultMakeSpan, TraceLayer},
+    ServiceBuilderExt,
+};
 use tracing::{error, info};
 
 use crate::dal;
@@ -80,10 +86,19 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
         .nest_service("/", get(get_static_file))
         .with_state(state);
 
+    let svc = ServiceBuilder::new()
+        .set_x_request_id(MakeRequestUuid)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::default().include_headers(true)),
+        )
+        .propagate_x_request_id()
+        .service(router);
+
     info!(%addr, "Listening on {}", addr);
 
     Server::bind(addr)
-        .serve(router.into_make_service())
+        .serve(svc.into_make_service())
         .await
         .unwrap();
 }
