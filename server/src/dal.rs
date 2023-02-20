@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use sqlx::{FromRow, Pool, Sqlite};
 
 #[derive(Debug, FromRow)]

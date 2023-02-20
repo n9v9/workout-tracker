@@ -10,6 +10,7 @@ use axum::{
 };
 use include_dir::{include_dir, Dir};
 use sqlx::{Pool, Sqlite};
+use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
     request_id::MakeRequestUuid,
@@ -99,8 +100,17 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
 
     Server::bind(addr)
         .serve(svc.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
+}
+
+async fn shutdown_signal() {
+    signal::ctrl_c()
+        .await
+        .expect("failed to install CTRL+C signal handler");
+
+    info!("Shutting down...");
 }
 
 async fn get_static_file(uri: Uri) -> Response {
