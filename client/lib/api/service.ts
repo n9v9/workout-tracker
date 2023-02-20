@@ -3,7 +3,6 @@ import type {
     EditSet,
     Exercise,
     ExerciseCountInSets,
-    ExerciseExists,
     ExerciseSet,
     Statistics,
     Workout,
