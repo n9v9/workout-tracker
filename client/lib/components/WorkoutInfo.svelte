@@ -7,6 +7,7 @@
     import type { ExerciseSet } from "../api/types";
     import Button from "./Button.svelte";
     import Timer from "./Timer.svelte";
+    import { scrollToSetId } from "../store";
 
     export let id: number;
 
@@ -38,6 +39,20 @@
             if (firstExerciseOfLatestSet === null) {
                 firstExerciseOfLatestSet = ptr;
             }
+        }
+
+        if ($scrollToSetId !== null) {
+            setTimeout(() => {
+                const element = document.querySelector(`#set-${$scrollToSetId}`);
+                element.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                    inline: "center",
+                });
+                setTimeout(() => {
+                    $scrollToSetId = null;
+                }, 2000); // Must be in sync with the duration in the keyframe.
+            }, 0);
         }
     });
 
@@ -77,7 +92,7 @@
 {/if}
 
 <div class="block">
-    <p class="is-size-5 mb-2">Durchgeführte Sätze</p>
+    <p class="is-size-5 mb-2">Durchgeführte Sätze ({sets.length})</p>
 
     {#if sets.length > 0}
         <table class="table is-fullwidth is-striped is-hoverable is-bordered mb-3">
@@ -94,7 +109,10 @@
             </thead>
             <tbody>
                 {#each sets as set}
-                    <tr on:click={() => editSet(set)}>
+                    <tr
+                        id="set-{set.id}"
+                        class={set.id === $scrollToSetId ? "highlight-exercise-set" : ""}
+                        on:click={() => editSet(set)}>
                         <td>
                             {set.exerciseName}
                             {#if set.note}
@@ -126,5 +144,19 @@
         cursor: pointer;
         /* Value of `has-background-link-light`. */
         background-color: hsl(219, 70%, 96%);
+    }
+
+    .highlight-exercise-set {
+        animation: highlight 2s ease-in-out;
+    }
+
+    /*
+    Have to use `-global` to prevent the keyframes from being removed.
+    https://stackoverflow.com/a/74491304
+    */
+    @keyframes -global-highlight {
+        50% {
+            background-color: hsl(204, 86%, 53%);
+        }
     }
 </style>

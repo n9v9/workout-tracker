@@ -4,7 +4,7 @@
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
     import { formatDate } from "../date";
-    import { uiDisabled } from "../store";
+    import { scrollToSetId, uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Notification from "./Notification.svelte";
     import Title from "./Title.svelte";
@@ -102,6 +102,11 @@
         // Reassign to trigger re-render.
         exerciseSets = exerciseSets;
     }
+
+    function navigateToWorkout(setId: number, workoutId: number) {
+        $scrollToSetId = setId;
+        navigate(`/workouts/${workoutId}`);
+    }
 </script>
 
 <Title text="Satz suchen" />
@@ -171,7 +176,7 @@
             {#each exerciseSets as set}
                 <tr
                     class={set.isPersonalBest ? "personal-best" : ""}
-                    on:click={() => navigate(`/workouts/${set.workoutId}`)}>
+                    on:click={() => navigateToWorkout(set.id, set.workoutId)}>
                     <td>{formatDate(set.date)}</td>
                     <td>{set.repetitions}</td>
                     <td>{set.weight}</td>
