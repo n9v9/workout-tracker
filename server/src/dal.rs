@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use sqlx::{FromRow, Pool, Sqlite};
+use sqlx::{FromRow, SqliteExecutor};
 
 #[derive(Debug, FromRow)]
 pub struct ExerciseEntity {
@@ -50,86 +50,116 @@ pub struct StatisticsOverviewEntity {
     pub avg_repetitions_per_set: i64,
 }
 
-pub async fn get_exercise_count(pool: &Pool<Sqlite>, id: i64) -> Result<ExerciseCountEntity> {
+pub async fn get_exercise_count<'local, E>(conn: E, id: i64) -> Result<ExerciseCountEntity>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("SELECT COUNT(*) AS count FROM exercise_set WHERE exercise_id = ?")
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(conn)
         .await
         .with_context(|| format!("Failed to get exercise count for exercise with id {id}"))
 }
 
-pub async fn get_exercise(pool: &Pool<Sqlite>, id: i64) -> Result<Option<ExerciseEntity>> {
+pub async fn get_exercise<'local, E>(conn: E, id: i64) -> Result<Option<ExerciseEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("SELECT id, name FROM exercise WHERE id = ?")
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(conn)
         .await
         .with_context(|| format!("Failed to get exercise with id {id}"))
 }
 
-pub async fn get_exercises(pool: &Pool<Sqlite>) -> Result<Vec<ExerciseEntity>> {
+pub async fn get_exercises<'local, E>(conn: E) -> Result<Vec<ExerciseEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("SELECT id, name FROM exercise ORDER BY name")
-        .fetch_all(pool)
+        .fetch_all(conn)
         .await
         .context("Failed to get exercises")
 }
 
-pub async fn create_exercise(pool: &Pool<Sqlite>, name: &str) -> Result<ExerciseEntity> {
+pub async fn create_exercise<'local, E>(conn: E, name: &str) -> Result<ExerciseEntity>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("INSERT INTO exercise (name) VALUES (?) RETURNING id, name")
         .bind(name)
-        .fetch_one(pool)
+        .fetch_one(conn)
         .await
         .with_context(|| format!(r#"Failed to create exercise with name "{name}""#))
 }
 
-pub async fn delete_exercise(pool: &Pool<Sqlite>, id: i64) -> Result<Option<()>> {
+pub async fn delete_exercise<'local, E>(conn: E, id: i64) -> Result<Option<()>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query("DELETE FROM exercise WHERE id = ?")
         .bind(id)
-        .execute(pool)
+        .execute(conn)
         .await
         .map(|res| (res.rows_affected() > 0).then_some(()))
         .with_context(|| format!("Failed to delete exercise with id {id}"))
 }
 
-pub async fn update_exercise(pool: &Pool<Sqlite>, id: i64, name: &str) -> Result<ExerciseEntity> {
+pub async fn update_exercise<'local, E>(conn: E, id: i64, name: &str) -> Result<ExerciseEntity>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("UPDATE exercise SET name = ? WHERE id = ? RETURNING id, name")
         .bind(name)
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(conn)
         .await
         .with_context(|| format!(r#"Failed to update name of exercise with id {id} to "{name}""#))
 }
 
-pub async fn get_workout(pool: &Pool<Sqlite>, id: i64) -> Result<Option<WorkoutEntity>> {
+pub async fn get_workout<'local, E>(conn: E, id: i64) -> Result<Option<WorkoutEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("SELECT id, started_utc_s FROM workout WHERE id = ?")
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(conn)
         .await
         .with_context(|| format!("Failed to get workout with id {id}"))
 }
 
-pub async fn get_workouts(pool: &Pool<Sqlite>) -> Result<Vec<WorkoutEntity>> {
+pub async fn get_workouts<'local, E>(conn: E) -> Result<Vec<WorkoutEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as("SELECT id, started_utc_s FROM workout")
-        .fetch_all(pool)
+        .fetch_all(conn)
         .await
         .context("Failed to get workouts")
 }
 
-pub async fn create_workout(pool: &Pool<Sqlite>) -> Result<WorkoutEntity> {
+pub async fn create_workout<'local, E>(conn: E) -> Result<WorkoutEntity>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as(
         "
         INSERT INTO workout (started_utc_s) VALUES (UNIXEPOCH(datetime()))
         RETURNING id, started_utc_s
         ",
     )
-    .fetch_one(pool)
+    .fetch_one(conn)
     .await
     .context("Failed to create workout")
 }
 
-pub async fn delete_workout(pool: &Pool<Sqlite>, id: i64) -> Result<Option<()>> {
+pub async fn delete_workout<'local, E>(conn: E, id: i64) -> Result<Option<()>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query("DELETE FROM workout WHERE id = ?")
         .bind(id)
-        .execute(pool)
+        .execute(conn)
         .await
         .with_context(|| format!("Failed to delete workout with id {id}"))
         .map(|res| (res.rows_affected() > 0).then_some(()))
@@ -160,45 +190,57 @@ fn create_get_exercise_query(constraint: Option<ExerciseSetConstraint>) -> Strin
     }
 }
 
-pub async fn get_exercise_set(pool: &Pool<Sqlite>, id: i64) -> Result<Option<ExerciseSetEntity>> {
+pub async fn get_exercise_set<'local, E>(conn: E, id: i64) -> Result<Option<ExerciseSetEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as(&create_get_exercise_query(Some(
         ExerciseSetConstraint::ExerciseSetId,
     )))
     .bind(id)
-    .fetch_optional(pool)
+    .fetch_optional(conn)
     .await
     .with_context(|| format!("Failed to get exercise set with id {id}"))
 }
 
-pub async fn get_exercise_sets(pool: &Pool<Sqlite>) -> Result<Vec<ExerciseSetEntity>> {
+pub async fn get_exercise_sets<'local, E>(conn: E) -> Result<Vec<ExerciseSetEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as(&create_get_exercise_query(None))
-        .fetch_all(pool)
+        .fetch_all(conn)
         .await
         .context("Failed to get all exercise sets")
 }
 
-pub async fn get_exercise_sets_by_workout_id(
-    pool: &Pool<Sqlite>,
+pub async fn get_exercise_sets_by_workout_id<'local, E>(
+    conn: E,
     id: i64,
-) -> Result<Vec<ExerciseSetEntity>> {
+) -> Result<Vec<ExerciseSetEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query_as(&create_get_exercise_query(Some(
         ExerciseSetConstraint::WorkoutId,
     )))
     .bind(id)
-    .fetch_all(pool)
+    .fetch_all(conn)
     .await
     .with_context(|| format!("Failed to get exercise sets for workout with id {id}"))
 }
 
-pub async fn create_or_update_exercise_set(
-    pool: &Pool<Sqlite>,
+pub async fn create_or_update_exercise_set<'local, E>(
+    conn: E,
     exercise_set_id: Option<i64>,
     workout_id: i64,
     exercise_id: i64,
     repetitions: i64,
     weight: i64,
     note: String,
-) -> Result<ExerciseSetEntity> {
+) -> Result<ExerciseSetEntity>
+where
+    E: SqliteExecutor<'local> + Copy,
+{
     let query = match exercise_set_id {
         Some(_) => {
             "
@@ -237,13 +279,13 @@ pub async fn create_or_update_exercise_set(
     }
 
     let mut exercise_set = query
-        .fetch_one(pool)
+        .fetch_one(conn)
         .await
         .with_context(|| {
             format!("Failed to create exercise set with workout id {workout_id} and exercise id {exercise_id}")
         })?;
 
-    exercise_set.exercise_name = get_exercise(pool, exercise_id)
+    exercise_set.exercise_name = get_exercise(conn, exercise_id)
         .await?
         .expect("Exercise must exist as it is used as a foreign key in the previous query")
         .name;
@@ -251,19 +293,25 @@ pub async fn create_or_update_exercise_set(
     Ok(exercise_set)
 }
 
-pub async fn delete_exercise_set(pool: &Pool<Sqlite>, id: i64) -> Result<Option<()>> {
+pub async fn delete_exercise_set<'local, E>(conn: E, id: i64) -> Result<Option<()>>
+where
+    E: SqliteExecutor<'local>,
+{
     sqlx::query("DELETE FROM exercise_set WHERE id = ?")
         .bind(id)
-        .execute(pool)
+        .execute(conn)
         .await
         .map(|res| (res.rows_affected() > 0).then_some(()))
         .with_context(|| format!("Failed to delete exercise set with id {id}"))
 }
 
-pub async fn get_set_recommendation_for_workout(
-    pool: &Pool<Sqlite>,
+pub async fn get_set_recommendation_for_workout<'local, E>(
+    conn: E,
     id: i64,
-) -> Result<SetRecommendationEntity> {
+) -> Result<SetRecommendationEntity>
+where
+    E: SqliteExecutor<'local> + Copy,
+{
     // Just recommend the last set again.
     let recommendation = sqlx::query_as::<_, SetRecommendationEntity>(
         "
@@ -275,7 +323,7 @@ pub async fn get_set_recommendation_for_workout(
         ",
     )
     .bind(id)
-    .fetch_optional(pool)
+    .fetch_optional(conn)
     .await?;
 
     if let Some(set) = recommendation {
@@ -297,7 +345,7 @@ pub async fn get_set_recommendation_for_workout(
         ",
     )
     .bind(id)
-    .fetch_optional(pool)
+    .fetch_optional(conn)
     .await?;
 
     if let Some(set) = recommendation {
@@ -312,7 +360,10 @@ pub async fn get_set_recommendation_for_workout(
     })
 }
 
-pub async fn get_statistics_overview(pool: &Pool<Sqlite>) -> Result<StatisticsOverviewEntity> {
+pub async fn get_statistics_overview<'local, E>(conn: E) -> Result<StatisticsOverviewEntity>
+where
+    E: SqliteExecutor<'local> + Copy,
+{
     #[derive(Debug, FromRow)]
     struct DatesRow {
         start_utc_s: i64,
@@ -327,7 +378,7 @@ pub async fn get_statistics_overview(pool: &Pool<Sqlite>) -> Result<StatisticsOv
         GROUP BY w.id
         ",
     )
-    .fetch_all(pool)
+    .fetch_all(conn)
     .await?;
 
     if workouts.is_empty() {
@@ -358,7 +409,7 @@ pub async fn get_statistics_overview(pool: &Pool<Sqlite>) -> Result<StatisticsOv
         FROM exercise_set
         ",
     )
-    .fetch_one(pool)
+    .fetch_one(conn)
     .await?;
 
     overview.total_sets = sets_reps.total_sets;
