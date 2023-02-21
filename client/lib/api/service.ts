@@ -61,6 +61,20 @@ class ApiService {
             id: x.id,
             exerciseId: x.exerciseId,
             exerciseName: x.exerciseName,
+            workoutId: x.workoutId,
+            repetitions: x.repetitions,
+            weight: x.weight,
+            date: new Date(x.createdUtcSeconds * 1000),
+            note: x.note ?? "",
+        }));
+    }
+
+    async getSetsByExerciseId(id: number): Promise<ExerciseSet[]> {
+        return (await this.getJson<SetEntity[]>(`exercises/${id}/sets`)).map(x => ({
+            id: x.id,
+            exerciseId: x.exerciseId,
+            exerciseName: x.exerciseName,
+            workoutId: x.workoutId,
             repetitions: x.repetitions,
             weight: x.weight,
             date: new Date(x.createdUtcSeconds * 1000),
@@ -79,6 +93,7 @@ class ApiService {
             id: set.id,
             exerciseId: set.exerciseId,
             exerciseName: set.exerciseName,
+            workoutId: set.workoutId,
             repetitions: set.repetitions,
             weight: set.weight,
             date: new Date(set.createdUtcSeconds * 1000),

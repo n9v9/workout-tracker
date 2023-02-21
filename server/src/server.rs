@@ -71,7 +71,14 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
                 .delete(delete_exercise)
                 .route_layer(check_exercise_exists_layer()),
         )
-        .route("/exercises/:id/count", get(get_exercise_count))
+        .route(
+            "/exercises/:id/sets",
+            get(get_exercise_sets_by_exercise_id).route_layer(check_exercise_exists_layer()),
+        )
+        .route(
+            "/exercises/:id/count",
+            get(get_exercise_count).route_layer(check_exercise_exists_layer()),
+        )
         .route("/sets", get(get_exercise_sets).post(create_exercise_set))
         .route(
             "/sets/:id",
@@ -292,6 +299,18 @@ async fn get_exercise_sets_by_workout_id(
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<ExerciseSet>>, AppError> {
     let exercise_sets = dal::get_exercise_sets_by_workout_id(&state.pool, id)
+        .await?
+        .into_iter()
+        .map(ExerciseSet::from)
+        .collect();
+    Ok(Json(exercise_sets))
+}
+
+async fn get_exercise_sets_by_exercise_id(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<Vec<ExerciseSet>>, AppError> {
+    let exercise_sets = dal::get_exercise_sets_by_exercise_id(&state.pool, id)
         .await?
         .into_iter()
         .map(ExerciseSet::from)

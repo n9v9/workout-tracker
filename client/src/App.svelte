@@ -5,6 +5,7 @@
     import SetForm from "../lib/components/SetForm.svelte";
     import { isLoading, apiErrorMessage } from "../lib/store";
     import Statistics from "../lib/components/Statistics.svelte";
+    import SearchSets from "../lib/components/SearchSets.svelte";
 </script>
 
 <div class="app">
@@ -28,8 +29,11 @@
             <Route path="/workouts/:id/sets/:setId" let:params>
                 <SetForm workoutId={parseInt(params.id)} setId={parseInt(params.setId)} />
             </Route>
-            <Route path="/statistiken">
+            <Route path="/statistics">
                 <Statistics />
+            </Route>
+            <Route path="/sets">
+                <SearchSets />
             </Route>
         </Router>
     </main>

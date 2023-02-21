@@ -12,6 +12,7 @@ export type ExerciseSet = {
     id: number;
     exerciseId: number;
     exerciseName: string;
+    workoutId: number;
     date: Date;
     repetitions: number;
     weight: number;

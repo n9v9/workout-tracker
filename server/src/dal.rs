@@ -165,12 +165,13 @@ where
         .map(|res| (res.rows_affected() > 0).then_some(()))
 }
 
-enum ExerciseSetConstraint {
-    ExerciseSetId,
-    WorkoutId,
+enum ExerciseSetConstraintId {
+    ExerciseSet,
+    Workout,
+    Exercise,
 }
 
-fn create_get_exercise_query(constraint: Option<ExerciseSetConstraint>) -> String {
+fn create_get_exercise_query(constraint: Option<ExerciseSetConstraintId>) -> String {
     const GET_ALL_EXERCISES_QUERY: &str = "
     SELECT
         es.id, es.exercise_id, e.name AS exercise_name,
@@ -180,11 +181,14 @@ fn create_get_exercise_query(constraint: Option<ExerciseSetConstraint>) -> Strin
 ";
 
     match constraint {
-        Some(ExerciseSetConstraint::ExerciseSetId) => {
+        Some(ExerciseSetConstraintId::ExerciseSet) => {
             format!("{GET_ALL_EXERCISES_QUERY} WHERE es.id = ?")
         }
-        Some(ExerciseSetConstraint::WorkoutId) => {
+        Some(ExerciseSetConstraintId::Workout) => {
             format!("{GET_ALL_EXERCISES_QUERY} WHERE es.workout_id = ?")
+        }
+        Some(ExerciseSetConstraintId::Exercise) => {
+            format!("{GET_ALL_EXERCISES_QUERY} WHERE es.exercise_id = ?")
         }
         None => GET_ALL_EXERCISES_QUERY.to_string(),
     }
@@ -195,7 +199,7 @@ where
     E: SqliteExecutor<'local>,
 {
     sqlx::query_as(&create_get_exercise_query(Some(
-        ExerciseSetConstraint::ExerciseSetId,
+        ExerciseSetConstraintId::ExerciseSet,
     )))
     .bind(id)
     .fetch_optional(conn)
@@ -221,12 +225,28 @@ where
     E: SqliteExecutor<'local>,
 {
     sqlx::query_as(&create_get_exercise_query(Some(
-        ExerciseSetConstraint::WorkoutId,
+        ExerciseSetConstraintId::Workout,
     )))
     .bind(id)
     .fetch_all(conn)
     .await
     .with_context(|| format!("Failed to get exercise sets for workout with id {id}"))
+}
+
+pub async fn get_exercise_sets_by_exercise_id<'local, E>(
+    conn: E,
+    id: i64,
+) -> Result<Vec<ExerciseSetEntity>>
+where
+    E: SqliteExecutor<'local> + Copy,
+{
+    sqlx::query_as(&create_get_exercise_query(Some(
+        ExerciseSetConstraintId::Exercise,
+    )))
+    .bind(id)
+    .fetch_all(conn)
+    .await
+    .with_context(|| format!("Failed to get exercise sets for exercise with id {id}"))
 }
 
 pub async fn create_or_update_exercise_set<'local, E>(
