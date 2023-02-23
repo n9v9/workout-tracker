@@ -3,7 +3,7 @@
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
-    import { uiDisabled } from "../store";
+    import { preselectExerciseSet, uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
@@ -190,6 +190,14 @@
         await api.deleteExercise(inputExerciseId);
         await load();
     }
+
+    function navigateToHistory() {
+        $preselectExerciseSet = {
+            exerciseId: inputExerciseId,
+            setId: setId,
+        };
+        navigate("/sets");
+    }
 </script>
 
 <Title text={setId === null ? "Neuer Satz" : "Satz Bearbeiten"} />
@@ -254,6 +262,17 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="field">
+    <Button classes="button is-link is-light is-fullwidth" click={navigateToHistory}>
+        <span class="icon-text">
+            <span class="icon">
+                <i class="bi bi-graph-up" />
+            </span>
+            <span>Historie</span>
+        </span>
+    </Button>
 </div>
 
 <div class="field">

@@ -4,7 +4,7 @@
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
     import { formatDate } from "../date";
-    import { scrollToSetId, uiDisabled } from "../store";
+    import { preselectExerciseSet, scrollToSetId, uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Notification from "./Notification.svelte";
     import Title from "./Title.svelte";
@@ -16,6 +16,7 @@
     let selectedExercisePlaceholder: Exercise = null;
     let selectedExercise: Exercise = null;
     let exerciseSets: DisplayExerciseSet[] = [];
+    let highlightSetId: number | null = null;
 
     type SortRow = "date" | "repetitions" | "weight";
 
@@ -31,37 +32,58 @@
 
     onMount(async () => {
         exercises = await api.getExercises();
-    });
 
-    function loadExerciseSets() {
-        api.getSetsByExerciseId(selectedExercise.id).then(sets => {
-            const displaySets = sets as DisplayExerciseSet[];
+        if ($preselectExerciseSet !== null) {
+            selectedExercise = exercises.find(x => x.id === $preselectExerciseSet.exerciseId);
+            await loadExerciseSets();
 
-            const maxWeight = displaySets.reduce(
-                (max, current) => (current.weight > max ? current.weight : max),
-                0,
-            );
-
-            const maxRepsWithMaxWeight = displaySets.reduce(
-                (max, current) =>
-                    current.repetitions > max && current.weight === maxWeight
-                        ? current.repetitions
-                        : max,
-                0,
-            );
-
-            // Filter out body weight exercises. Otherwise all sets would be marked as personal best.
-            if (maxWeight > 0) {
-                displaySets.forEach(
-                    x =>
-                        (x.isPersonalBest =
-                            x.weight === maxWeight && x.repetitions === maxRepsWithMaxWeight),
-                );
+            if ($preselectExerciseSet.setId !== null) {
+                highlightSetId = $preselectExerciseSet.setId;
+                setTimeout(() => {
+                    const element = document.querySelector(`#set-${highlightSetId}`);
+                    element.scrollIntoView({
+                        behavior: "auto",
+                        block: "center",
+                        inline: "center",
+                    });
+                    setTimeout(() => {
+                        highlightSetId = null;
+                    }, 1500); // Must be in sync with the duration in the keyframe.
+                }, 0);
             }
 
-            exerciseSets = displaySets;
-            sortExerciseSets(sortState.active, false);
-        });
+            $preselectExerciseSet = null;
+        }
+    });
+
+    async function loadExerciseSets() {
+        const sets = await api.getSetsByExerciseId(selectedExercise.id);
+        const displaySets = sets as DisplayExerciseSet[];
+
+        const maxWeight = displaySets.reduce(
+            (max, current) => (current.weight > max ? current.weight : max),
+            0,
+        );
+
+        const maxRepsWithMaxWeight = displaySets.reduce(
+            (max, current) =>
+                current.repetitions > max && current.weight === maxWeight
+                    ? current.repetitions
+                    : max,
+            0,
+        );
+
+        // Filter out body weight exercises. Otherwise all sets would be marked as personal best.
+        if (maxWeight > 0) {
+            displaySets.forEach(
+                x =>
+                    (x.isPersonalBest =
+                        x.weight === maxWeight && x.repetitions === maxRepsWithMaxWeight),
+            );
+        }
+
+        exerciseSets = displaySets;
+        sortExerciseSets(sortState.active, false);
     }
 
     function sortExerciseSets(row: SortRow, toggle: boolean) {
@@ -175,7 +197,10 @@
         <tbody>
             {#each exerciseSets as set}
                 <tr
-                    class={set.isPersonalBest ? "personal-best" : ""}
+                    id="set-{set.id}"
+                    class="{set.isPersonalBest ? 'personal-best' : ''} {set.id === highlightSetId
+                        ? 'highlight-exercise-set'
+                        : ''}"
                     on:click={() => navigateToWorkout(set.id, set.workoutId)}>
                     <td>{formatDate(set.date)}</td>
                     <td>{set.repetitions}</td>
@@ -197,18 +222,36 @@
         /* Prevents the background from hiding the border. */
         background-clip: padding-box;
     }
+
     th:hover {
         cursor: pointer;
     }
+
     tr:hover td {
         cursor: pointer;
         /* Value of `has-background-link-light`. */
         background-color: hsl(219, 70%, 96%);
     }
-    .personal-best {
-        background-color: #90f7b3 !important;
+
+    .table.is-striped tbody tr:not(.is-selected).personal-best {
+        background-color: #90f7b3;
     }
-    .personal-best:hover {
-        background-color: #90f7b3 !important;
+
+    tr.personal-best:hover td {
+        background-color: #5ff791;
+    }
+
+    .highlight-exercise-set {
+        animation: highlight 0.75s 2 ease-out;
+    }
+
+    /*
+    Have to use `-global` to prevent the keyframes from being removed.
+    https://stackoverflow.com/a/74491304
+    */
+    @keyframes -global-highlight {
+        50% {
+            background-color: hsl(204, 86%, 53%);
+        }
     }
 </style>

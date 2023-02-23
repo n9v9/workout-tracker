@@ -45,13 +45,13 @@
             setTimeout(() => {
                 const element = document.querySelector(`#set-${$scrollToSetId}`);
                 element.scrollIntoView({
-                    behavior: "smooth",
+                    behavior: "auto",
                     block: "center",
                     inline: "center",
                 });
                 setTimeout(() => {
                     $scrollToSetId = null;
-                }, 2000); // Must be in sync with the duration in the keyframe.
+                }, 1500); // Must be in sync with the duration in the keyframe.
             }, 0);
         }
     });
@@ -147,7 +147,7 @@
     }
 
     .highlight-exercise-set {
-        animation: highlight 2s ease-in-out;
+        animation: highlight 0.75s 2 ease-out;
     }
 
     /*
