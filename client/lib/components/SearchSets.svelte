@@ -9,6 +9,7 @@
     import Notification from "./Notification.svelte";
     import Title from "./Title.svelte";
     import UpDownArrow from "./UpDownArrow.svelte";
+    import { _ } from "svelte-i18n";
 
     type DisplayExerciseSet = ExerciseSet & { isPersonalBest: boolean };
 
@@ -131,19 +132,19 @@
     }
 </script>
 
-<Title text="Satz suchen" />
+<Title text={$_("search_sets")} />
 
 <div class="block">
     <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>
-        <span>Zur Workout Übersicht</span>
+        <span>{$_("back_to_workout_list")}</span>
     </Button>
 </div>
 
 <div class="field">
-    <label for="exercise" class="label">Übung</label>
+    <label for="exercise" class="label">{$_("exercise")}</label>
 
     <div class="field is-horizontal">
         <div class="field-body">
@@ -156,7 +157,7 @@
                             disabled={$uiDisabled}
                             on:change={loadExerciseSets}>
                             <option value={selectedExercisePlaceholder} disabled selected
-                                >Übung auswählen</option>
+                                >{$_("select_exercise")}</option>
                             {#each exercises as exercise}
                                 <option value={exercise}>{exercise.name}</option>
                             {/each}
@@ -173,7 +174,7 @@
         <thead>
             <tr>
                 <th class="has-background-white" on:click={() => sortExerciseSets("date", true)}>
-                    Datum
+                    {$_("date")}
                     {#if sortState.active === "date"}
                         <UpDownArrow up={sortState.ascending} />
                     {/if}
@@ -181,13 +182,13 @@
                 <th
                     class="has-background-white"
                     on:click={() => sortExerciseSets("repetitions", true)}>
-                    <abbr title="Anzahl Wiederholungen">Reps</abbr>
+                    <abbr title={$_("number_repetitions")}>{$_("abbr_number_repetitions")}</abbr>
                     {#if sortState.active === "repetitions"}
                         <UpDownArrow up={sortState.ascending} />
                     {/if}
                 </th>
                 <th class="has-background-white" on:click={() => sortExerciseSets("weight", true)}>
-                    <abbr title="Gewicht in KG">KG</abbr>
+                    <abbr title={$_("weight_in_kg")}>{$_("abbr_weight_in_kg")}</abbr>
                     {#if sortState.active === "weight"}
                         <UpDownArrow up={sortState.ascending} />
                     {/if}
@@ -210,9 +211,9 @@
         </tbody>
     </table>
 {:else if selectedExercise === null}
-    <Notification text="Bitte eine Übung auswählen." />
+    <Notification text={$_("notification_please_select_an_exercise")} />
 {:else}
-    <Notification text="Es existieren noch keine Sätze mit dieser Übung." />
+    <Notification text={$_("notification_no_sets_with_exercise_exist")} />
 {/if}
 
 <style>

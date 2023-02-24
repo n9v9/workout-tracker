@@ -8,6 +8,7 @@
     import Button from "./Button.svelte";
     import Timer from "./Timer.svelte";
     import { scrollToSetId } from "../store";
+    import { _ } from "svelte-i18n";
 
     export let id: number;
 
@@ -70,40 +71,41 @@
         <span class="icon">
             <i class="bi bi-plus-lg" />
         </span>
-        <span>Neuer Satz</span>
+        <span>{$_("new_set")}</span>
     </Button>
     <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>
-        <span>Zur Workout Übersicht</span>
+        <span>{$_("back_to_workout_list")}</span>
     </Button>
 </div>
 
 {#if latest !== null && firstExerciseOfLatestSet !== null}
     <div class="block level is-mobile">
         <div class="level-item">
-            <Timer text="Letzter Satz" reference={latest.date} />
+            <Timer text={$_("last_set")} reference={latest.date} />
         </div>
         <div class="level-item">
-            <Timer text="Aktuelle Übung" reference={firstExerciseOfLatestSet.date} />
+            <Timer text={$_("current_exercise")} reference={firstExerciseOfLatestSet.date} />
         </div>
     </div>
 {/if}
 
 <div class="block">
-    <p class="is-size-5 mb-2">Durchgeführte Sätze ({sets.length})</p>
+    <p class="is-size-5 mb-2">{$_("completed_sets")} ({sets.length})</p>
 
     {#if sets.length > 0}
         <table class="table is-fullwidth is-striped is-hoverable is-bordered mb-3">
             <thead>
                 <tr>
-                    <th class="has-background-white">Übung</th>
+                    <th class="has-background-white">{$_("exercise")}</th>
                     <th class="has-background-white">
-                        <abbr title="Anzahl Wiederholungen">Reps</abbr>
+                        <abbr title={$_("number_repetitions")}
+                            >{$_("abbr_number_repetitions")}</abbr>
                     </th>
                     <th class="has-background-white">
-                        <abbr title="Gewicht in KG">KG</abbr>
+                        <abbr title={$_("weight_in_kg")}>{$_("abbr_weight_in_kg")}</abbr>
                     </th>
                 </tr>
             </thead>
@@ -128,7 +130,7 @@
             </tbody>
         </table>
     {:else}
-        <Notification text="Es wurden noch keine Sätze eingetragen." />
+        <Notification text={$_("notification_no_sets_exist")} />
     {/if}
 </div>
 

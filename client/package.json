@@ -10,6 +10,7 @@
         "check": "svelte-check --tsconfig ./tsconfig.json"
     },
     "devDependencies": {
+        "@rollup/plugin-json": "^6.0.0",
         "@sveltejs/vite-plugin-svelte": "^2.0.0",
         "@tsconfig/svelte": "^3.0.0",
         "prettier": "^2.8.3",
@@ -24,6 +25,8 @@
         "bootstrap-icons": "^1.10.3",
         "bulma": "^0.9.4",
         "rollup-plugin-postcss": "^4.0.2",
-        "svelte-routing": "^1.6.0"
+        "svelte-i18n": "^3.6.0",
+        "svelte-routing": "^1.6.0",
+        "yarn": "^1.22.19"
     }
 }

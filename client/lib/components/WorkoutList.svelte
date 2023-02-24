@@ -8,6 +8,7 @@
     import { onMount } from "svelte";
     import Button from "./Button.svelte";
     import { formatDate } from "../date";
+    import { _ } from "svelte-i18n";
 
     let workouts: Workout[] = [];
     let showDeleteModal = false;
@@ -37,31 +38,31 @@
     }
 </script>
 
-<Title text={"Workouts"} />
+<Title text={$_("workouts")} />
 
 <div class="block">
     <Button classes="button is-fullwidth is-primary" click={createWorkout}>
         <span class="icon">
             <i class="bi bi-plus-lg" />
         </span>
-        <span>Neues Workout</span>
+        <span>{$_("new_workout")}</span>
     </Button>
     <Button classes="button is-fullwidth is-info mt-2" click={() => navigate("/sets")}>
         <span class="icon">
             <i class="bi bi-search" />
         </span>
-        <span>Sätze suchen</span>
+        <span>{$_("search_sets")}</span>
     </Button>
     <Button classes="button is-fullwidth is-info mt-2" click={() => navigate("/statistics")}>
         <span class="icon">
             <i class="bi bi-graph-up-arrow" />
         </span>
-        <span>Statistiken</span>
+        <span>{$_("statistics")}</span>
     </Button>
 </div>
 
 <div class="block">
-    <p class="is-size-5 mb-2">Bisherige Workouts ({workouts.length})</p>
+    <p class="is-size-5 mb-2">{$_("previous_workouts")} ({workouts.length})</p>
 
     {#each workouts as workout}
         <div class="workout buttons has-addons">
@@ -77,23 +78,25 @@
             </Button>
         </div>
     {:else}
-        <Notification text="Es wurden noch keine Workouts eingetragen." />
+        <Notification text={$_("notification_no_workouts_exist")} />
     {/each}
 </div>
 
 {#if showDeleteModal}
     <Modal
-        title="Workout Löschen"
+        title={$_("delete_workout")}
         confirm={{
-            text: "Löschen",
+            text: $_("delete"),
             click: deleteWorkout,
             canClick: true,
         }}
         cancel={{
-            text: "Abbrechen",
+            text: $_("cancel"),
             click: () => (showDeleteModal = false),
         }}>
-        {`Workout vom ${formatDate(selectedWorkout.started)} wirklich löschen?`}
+        {$_("delete_workout_confirmation", {
+            values: { date: formatDate(selectedWorkout.started) },
+        })}
     </Modal>
 {/if}
 

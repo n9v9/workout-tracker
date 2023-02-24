@@ -7,6 +7,7 @@
     import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
+    import { _ } from "svelte-i18n";
 
     export let workoutId: number;
     export let setId: number | null = null;
@@ -60,6 +61,8 @@
     }
 
     async function load() {
+        document.querySelector("#note").setAttribute("data-content", $_("placeholder_note"));
+
         resetVariables();
 
         const result = await Promise.all([
@@ -200,10 +203,10 @@
     }
 </script>
 
-<Title text={setId === null ? "Neuer Satz" : "Satz Bearbeiten"} />
+<Title text={setId === null ? $_("new_set") : $_("edit_set")} />
 
 <div class="field">
-    <label for="exercise" class="label">Übung</label>
+    <label for="exercise" class="label">{$_("exercise")}</label>
 
     <div class="field is-horizontal">
         <div class="field-body">
@@ -270,13 +273,13 @@
             <span class="icon">
                 <i class="bi bi-graph-up" />
             </span>
-            <span>Historie</span>
+            <span>{$_("history")}</span>
         </span>
     </Button>
 </div>
 
 <div class="field">
-    <label for="repetitions" class="label">Anzahl Wiederholungen</label>
+    <label for="repetitions" class="label">{$_("number_repetitions")}</label>
     <div class="control">
         <input
             type="number"
@@ -297,7 +300,7 @@
 </div>
 
 <div class="field">
-    <label for="weight" class="label">Gewicht in KG</label>
+    <label for="weight" class="label">{$_("weight_in_kg")}</label>
     <div class="control">
         <input
             type="number"
@@ -321,7 +324,7 @@
 </div>
 
 <div class="field">
-    <label for="note" class="label">Notiz</label>
+    <label for="note" class="label">{$_("note")}</label>
     <div class="control">
         <span
             id="note"
@@ -338,44 +341,45 @@
         {#if setId}
             <Button
                 classes="button is-danger is-light is-fullwidth"
-                click={() => (showDeleteModal = true)}>Löschen</Button>
+                click={() => (showDeleteModal = true)}>{$_("delete")}</Button>
         {/if}
     </div>
 
     <div>
-        <Button classes="button is-light is-fullwidth" click={() => goBack()}>Abbrechen</Button>
+        <Button classes="button is-light is-fullwidth" click={() => goBack()}
+            >{$_("cancel")}</Button>
     </div>
 
     <div>
         <Button classes="button is-primary is-light is-fullwidth" click={save} disabled={!canSave}
-            >Speichern</Button>
+            >{$_("save")}</Button>
     </div>
 </div>
 
 {#if showDeleteModal}
     <Modal
-        title="Satz Löschen"
+        title={$_("delete_set")}
         confirm={{
-            text: "Löschen",
+            text: $_("delete"),
             click: deleteSet,
             canClick: true,
         }}
         cancel={{
-            text: "Abbrechen",
+            text: $_("cancel"),
             click: () => (showDeleteModal = false),
         }}>
-        Satz wirklich löschen?
+        {$_("delete_set_confirmation")}
     </Modal>
 {:else if showAddExerciseModal}
     <Modal
-        title="Übung erstellen"
+        title={$_("create_exercise")}
         confirm={{
-            text: "Speichern",
+            text: $_("save"),
             click: createExercise,
             canClick: canSaveOrUpdateExercise,
         }}
         cancel={{
-            text: "Abbrechen",
+            text: $_("cancel"),
             click: () => {
                 showAddExerciseModal = false;
                 inputExerciseName = "";
@@ -383,7 +387,7 @@
             },
         }}>
         <div class="field">
-            <label for="new-exercise-name" class="label">Name der Übung</label>
+            <label for="new-exercise-name" class="label">{$_("exercise_name")}</label>
             <div class="field">
                 <div class="control">
                     <input
@@ -393,20 +397,20 @@
                         bind:this={inputExerciseNameElement}
                         bind:value={inputExerciseName}
                         on:keyup={e => updateOrCreateExerciseKeyUp(e, createExercise)}
-                        placeholder="z. B. Squats"
+                        placeholder={$_("exercise_name_placeholder")}
                         enterkeyhint="send" />
                 </div>
                 <p class="{!exerciseNameExists ? 'is-hidden' : ''} help is-danger"
-                    >Diese Übung existiert bereits.</p>
+                    >{$_("exercise_exists")}</p>
             </div>
         </div>
     </Modal>
 {:else if showChangeExerciseModal}
     <Modal
-        title="Übung bearbeiten"
-        confirm={{ text: "Speichern", click: updateExercise, canClick: canSaveOrUpdateExercise }}
+        title={$_("edit_exercise")}
+        confirm={{ text: $_("save"), click: updateExercise, canClick: canSaveOrUpdateExercise }}
         cancel={{
-            text: "Abbrechen",
+            text: $_("cancel"),
             click: () => {
                 showChangeExerciseModal = false;
                 inputExerciseName = "";
@@ -414,7 +418,7 @@
             },
         }}>
         <div class="field">
-            <label for="changed-exercise-name" class="label">Neuer Name</label>
+            <label for="changed-exercise-name" class="label">{$_("new_exercise_name")}</label>
             <div class="field">
                 <div class="control">
                     <input
@@ -424,40 +428,46 @@
                         bind:this={inputExerciseNameElement}
                         bind:value={inputExerciseName}
                         on:keyup={e => updateOrCreateExerciseKeyUp(e, updateExercise)}
-                        placeholder="z. B. Squats"
+                        placeholder={$_("exercise_name_placeholder")}
                         enterkeyhint="send" />
                 </div>
                 <p class="{!exerciseNameExists ? 'is-hidden' : ''} help is-danger"
-                    >Diese Übung existiert bereits.</p>
+                    >{$_("exercise_exists")}</p>
             </div>
         </div>
     </Modal>
 {:else if showDeleteExerciseModal}
     <Modal
-        title="Übung Löschen"
+        title={$_("delete_exercise")}
         confirm={{
-            text: "Löschen",
+            text: $_("delete"),
             click: deleteExercise,
             canClick: true,
         }}
         cancel={{
-            text: "Abbrechen",
+            text: $_("cancel"),
             click: () => (showDeleteExerciseModal = false),
         }}>
         <p
-            >Soll die Übung "{exercises.find(x => x.id === inputExerciseId).name}" wirklich gelöscht
-            werden?</p>
+            >{$_("delete_exercise_confirmation", {
+                values: { name: exercises.find(x => x.id === inputExerciseId).name },
+            })}</p>
     </Modal>
 {:else if showCannotDeleteExerciseModal}
     <Modal
-        title="Übung Löschen"
+        title={$_("delete_exercise")}
         cancel={{
-            text: "OK",
+            text: $_("ok"),
             click: () => (showCannotDeleteExerciseModal = false),
         }}>
         <p
-            >Die Übung "{exercises.find(x => x.id === inputExerciseId).name}" kann nicht gelöscht
-            werden, da sie in {exerciseInSetsCount} Sätzen enthalten ist.</p>
+            >{$_("delete_exercise_confirmation_sets_exist", {
+                values: {
+                    name: exercises.find(x => x.id === inputExerciseId).name,
+                    count: exerciseInSetsCount,
+                },
+            })}
+        </p>
     </Modal>
 {/if}
 
@@ -485,7 +495,8 @@
     }
 
     #note[contenteditable]:empty::before {
-        content: "Optionale Notiz ...";
+        /* Set in TS above to allow for I18N. */
+        content: attr(data-content);
         color: gray;
     }
 

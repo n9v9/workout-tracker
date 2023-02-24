@@ -6,6 +6,7 @@
     import Button from "./Button.svelte";
     import LoadingBanner from "./LoadingBanner.svelte";
     import Title from "./Title.svelte";
+    import { _ } from "svelte-i18n";
 
     let showQuickView = false;
     let showDetailView = false;
@@ -46,7 +47,7 @@
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>
-        <span>Zur Workout Übersicht</span>
+        <span>{$_("back_to_workout_list")}</span>
     </Button>
 </div>
 
@@ -59,7 +60,7 @@
                 class="card-header"
                 on:click={() => (showQuickView = !showQuickView)}
                 on:keypress={() => (showQuickView = !showQuickView)}>
-                <p class="card-header-title">Schnellübersicht</p>
+                <p class="card-header-title">{$_("quick_overview")}</p>
                 <button class="card-header-icon">
                     <span class="icon">
                         <i class="bi bi-chevron-{showQuickView ? 'down' : 'right'}" />
@@ -71,27 +72,27 @@
                     <div class="content">
                         <div class="container">
                             <div class="has-text-centered">
-                                <p class="is-size-6 heading">Workouts</p>
+                                <p class="is-size-6 heading">{$_("workouts")}</p>
                                 <p class="title">{totalWorkouts}</p>
                             </div>
                             <div class="has-text-centered">
-                                <p class="is-size-6 heading">Workout Zeit</p>
+                                <p class="is-size-6 heading">{$_("workout_time")}</p>
                                 <p class="title">{totalDuration}</p>
                             </div>
                             <div class="has-text-centered">
-                                <p class="is-size-6 heading">Ø Workout Zeit</p>
+                                <p class="is-size-6 heading">{$_("avg_workout_time")}</p>
                                 <p class="title">{avgDuration}</p>
                             </div>
                             <div class="has-text-centered">
-                                <p class="is-size-6 heading">Sätze</p>
+                                <p class="is-size-6 heading">{$_("sets")}</p>
                                 <p class="title">{totalSets}</p>
                             </div>
                             <div class="has-text-centered">
-                                <p class="is-size-6 heading">Wiederholungen</p>
+                                <p class="is-size-6 heading">{$_("repetitions")}</p>
                                 <p class="title">{totalReps}</p>
                             </div>
                             <div class="has-text-centered">
-                                <p class="is-size-6 heading">Ø Wiederholungen pro Satz</p>
+                                <p class="is-size-6 heading">{$_("avg_repetitions_per_set")}</p>
                                 <p class="title">{avgRepsPerSet}</p>
                             </div>
                         </div>
@@ -106,7 +107,7 @@
             class="card-header"
             on:click={() => (showDetailView = !showDetailView)}
             on:keypress={() => (showDetailView = !showDetailView)}>
-            <p class="card-header-title">🚧 Detailansicht</p>
+            <p class="card-header-title">🚧 {$_("detail_view")}</p>
             <button class="card-header-icon">
                 <span class="icon">
                     <i class="bi bi-chevron-{showDetailView ? 'down' : 'right'}" />

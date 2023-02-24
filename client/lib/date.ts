@@ -1,15 +1,17 @@
+import { format, getDateFormatter, getTimeFormatter } from "svelte-i18n";
+import { get } from "svelte/store";
+
 export function formatDate(date: Date): string {
-    const dateFormatted = date.toLocaleDateString("de", {
+    const dateFormatted = getDateFormatter({
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-    });
+    }).format(date);
 
-    const timeFormatted =
-        date.toLocaleTimeString("de", {
-            hour: "2-digit",
-            minute: "2-digit",
-        }) + " Uhr";
+    const timeFormatted = getTimeFormatter({
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
 
     const isRelativeTo = (date: Date, relativeDay: number): boolean => {
         const today = new Date();
@@ -20,17 +22,19 @@ export function formatDate(date: Date): string {
         );
     };
 
+    const formatter = get(format);
+
     if (isRelativeTo(date, 0)) {
-        return `Heute, ${timeFormatted}`;
+        return `${formatter("date_name_today")}, ${timeFormatted}`;
     } else if (isRelativeTo(date, -1)) {
-        return `Gestern, ${timeFormatted}`;
+        return `${formatter("date_name_yesterday")}, ${timeFormatted}`;
     }
 
     for (let i = -2; i > -7; i--) {
         if (isRelativeTo(date, i)) {
-            return `${date.toLocaleDateString("de", {
+            return `${getDateFormatter({
                 weekday: "long",
-            })}, ${timeFormatted}`;
+            }).format(date)}, ${timeFormatted}`;
         }
     }
 
