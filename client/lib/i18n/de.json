@@ -37,8 +37,10 @@
     "completed_sets": "Durchgeführte Sätze",
     "number_repetitions": "Anzahl Wiederholungen",
     "abbr_number_repetitions": "Reps",
-    "weight_in_kg": "Gewicht in KG",
-    "abbr_weight_in_kg": "KG",
+    "weight_in_kg": "Gewicht in kg",
+    "abbr_weight_in_kg": "kg",
+    "weight_in_lbs": "Gewicht in lbs",
+    "abbr_weight_in_lbs": "lbs",
     "exercise": "Übung",
     "history": "Historie",
     "note": "Notiz",
@@ -50,5 +52,12 @@
     "notification_no_sets_with_exercise_exist": "Es existieren noch keine Sätze mit dieser Übung.",
     "loading": "Wird geladen ...",
     "quick_overview": "Schnellübersicht",
-    "detail_view": "Detailansicht"
+    "detail_view": "Detailansicht",
+    "settings": "Einstellungen",
+    "language": "Sprache",
+    "language_en": "Englisch",
+    "language_de": "Deutsch",
+    "unit": "Einheit",
+    "unit_kg": "Kilogramm (kg)",
+    "unit_lbs": "Pfund (lbs)"
 }

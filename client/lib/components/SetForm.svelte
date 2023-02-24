@@ -3,7 +3,7 @@
     import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
-    import { preselectExerciseSet, uiDisabled } from "../store";
+    import { preselectExerciseSet, settings, uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
@@ -300,7 +300,7 @@
 </div>
 
 <div class="field">
-    <label for="weight" class="label">{$_("weight_in_kg")}</label>
+    <label for="weight" class="label">{$_(`weight_in_${$settings.unit}`)}</label>
     <div class="control">
         <input
             type="number"

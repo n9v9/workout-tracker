@@ -4,7 +4,7 @@
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
     import { formatDate } from "../date";
-    import { preselectExerciseSet, scrollToSetId, uiDisabled } from "../store";
+    import { preselectExerciseSet, scrollToSetId, settings, uiDisabled } from "../store";
     import Button from "./Button.svelte";
     import Notification from "./Notification.svelte";
     import Title from "./Title.svelte";
@@ -188,7 +188,8 @@
                     {/if}
                 </th>
                 <th class="has-background-white" on:click={() => sortExerciseSets("weight", true)}>
-                    <abbr title={$_("weight_in_kg")}>{$_("abbr_weight_in_kg")}</abbr>
+                    <abbr title={$_(`weight_in_${$settings.unit}`)}
+                        >{$_(`abbr_weight_in_${$settings.unit}`)}</abbr>
                     {#if sortState.active === "weight"}
                         <UpDownArrow up={sortState.ascending} />
                     {/if}

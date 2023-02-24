@@ -7,7 +7,7 @@
     import type { ExerciseSet } from "../api/types";
     import Button from "./Button.svelte";
     import Timer from "./Timer.svelte";
-    import { scrollToSetId } from "../store";
+    import { scrollToSetId, settings } from "../store";
     import { _ } from "svelte-i18n";
 
     export let id: number;
@@ -105,7 +105,8 @@
                             >{$_("abbr_number_repetitions")}</abbr>
                     </th>
                     <th class="has-background-white">
-                        <abbr title={$_("weight_in_kg")}>{$_("abbr_weight_in_kg")}</abbr>
+                        <abbr title={$_(`weight_in_${$settings.unit}`)}
+                            >{$_(`abbr_weight_in_${$settings.unit}`)}</abbr>
                     </th>
                 </tr>
             </thead>

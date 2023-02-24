@@ -37,8 +37,10 @@
     "completed_sets": "Completed Sets",
     "number_repetitions": "Number of Repetitions",
     "abbr_number_repetitions": "Reps",
-    "weight_in_kg": "Weight in KG",
-    "abbr_weight_in_kg": "KG",
+    "weight_in_kg": "Weight in kg",
+    "abbr_weight_in_kg": "kg",
+    "weight_in_lbs": "Weight in lbs",
+    "abbr_weight_in_lbs": "lbs",
     "exercise": "Exercise",
     "history": "History",
     "note": "Note",
@@ -50,5 +52,12 @@
     "notification_no_sets_with_exercise_exist": "No sets with this exercise have been entered yet.",
     "loading": "Loading ...",
     "quick_overview": "Quick Overview",
-    "detail_view": "Detail View"
+    "detail_view": "Detail View",
+    "settings": "Settings",
+    "language": "Language",
+    "language_en": "English",
+    "language_de": "German",
+    "unit": "Unit",
+    "unit_kg": "Kilograms (kg)",
+    "unit_lbs": "Pounds (lbs)"
 }

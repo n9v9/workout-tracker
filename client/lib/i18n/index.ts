@@ -1,4 +1,6 @@
-import { addMessages, init, getLocaleFromNavigator } from "svelte-i18n";
+import { addMessages, init } from "svelte-i18n";
+import { get } from "svelte/store";
+import { settings, type Language } from "../store";
 import de from "./de.json";
 import en from "./en.json";
 
@@ -8,7 +10,13 @@ export function initialize() {
 
     init({
         fallbackLocale: "de",
-        // initialLocale: getLocaleFromNavigator(),
-        initialLocale: "en",
+        initialLocale: get(settings).language,
+    });
+}
+
+export function changeLanguage(language: Language) {
+    init({
+        fallbackLocale: "de",
+        initialLocale: language,
     });
 }
