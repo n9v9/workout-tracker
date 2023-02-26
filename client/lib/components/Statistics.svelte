@@ -54,52 +54,48 @@
 {#if $isLoading}
     <LoadingBanner />
 {:else}
-    <div class="mb-2">
-        <div class="card">
-            <header
-                class="card-header"
-                on:click={() => (showQuickView = !showQuickView)}
-                on:keypress={() => (showQuickView = !showQuickView)}>
-                <p class="card-header-title">{$_("quick_overview")}</p>
-                <button class="card-header-icon">
-                    <span class="icon">
-                        <i class="bi bi-chevron-{showQuickView ? 'down' : 'right'}" />
-                    </span>
-                </button>
-            </header>
-            {#if showQuickView}
-                <div class="card-content">
-                    <div class="content">
-                        <div class="container">
-                            <div class="has-text-centered">
-                                <p class="is-size-6 heading">{$_("workouts")}</p>
-                                <p class="title">{totalWorkouts}</p>
-                            </div>
-                            <div class="has-text-centered">
-                                <p class="is-size-6 heading">{$_("workout_time")}</p>
-                                <p class="title">{totalDuration}</p>
-                            </div>
-                            <div class="has-text-centered">
-                                <p class="is-size-6 heading">{$_("avg_workout_time")}</p>
-                                <p class="title">{avgDuration}</p>
-                            </div>
-                            <div class="has-text-centered">
-                                <p class="is-size-6 heading">{$_("sets")}</p>
-                                <p class="title">{totalSets}</p>
-                            </div>
-                            <div class="has-text-centered">
-                                <p class="is-size-6 heading">{$_("repetitions")}</p>
-                                <p class="title">{totalReps}</p>
-                            </div>
-                            <div class="has-text-centered">
-                                <p class="is-size-6 heading">{$_("avg_repetitions_per_set")}</p>
-                                <p class="title">{avgRepsPerSet}</p>
-                            </div>
-                        </div>
+    <div class="card mb-2">
+        <header
+            class="card-header"
+            on:click={() => (showQuickView = !showQuickView)}
+            on:keypress={() => (showQuickView = !showQuickView)}>
+            <p class="card-header-title">{$_("quick_overview")}</p>
+            <button class="card-header-icon">
+                <span class="icon">
+                    <i class="bi bi-chevron-{showQuickView ? 'down' : 'right'}" />
+                </span>
+            </button>
+        </header>
+        {#if showQuickView}
+            <div class="card-content">
+                <div class="content">
+                    <div class="columns is-mobile">
+                        <div class="column">{$_("workouts")}</div>
+                        <div class="column">{totalWorkouts}</div>
+                    </div>
+                    <div class="columns is-mobile">
+                        <div class="column">{$_("workout_time")}</div>
+                        <div class="column">{totalDuration}</div>
+                    </div>
+                    <div class="columns is-mobile">
+                        <div class="column">{$_("avg_workout_time")}</div>
+                        <div class="column">{avgDuration}</div>
+                    </div>
+                    <div class="columns is-mobile">
+                        <div class="column">{$_("sets")}</div>
+                        <div class="column">{totalSets}</div>
+                    </div>
+                    <div class="columns is-mobile">
+                        <div class="column">{$_("repetitions")}</div>
+                        <div class="column">{totalReps}</div>
+                    </div>
+                    <div class="columns is-mobile">
+                        <div class="column">{$_("avg_repetitions_per_set")}</div>
+                        <div class="column">{avgRepsPerSet}</div>
                     </div>
                 </div>
-            {/if}
-        </div>
+            </div>
+        {/if}
     </div>
 
     <div class="card">
@@ -121,16 +117,6 @@
 {/if}
 
 <style>
-    .container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, 350px);
-        justify-content: center;
-    }
-
-    .container div {
-        margin-bottom: 1.25rem;
-    }
-
     .card-header:hover {
         cursor: pointer;
     }
