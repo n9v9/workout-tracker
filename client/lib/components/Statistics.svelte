@@ -40,7 +40,7 @@
     }
 </script>
 
-<Title text="Statistiken" />
+<Title text={$_("statistics")} />
 
 <div class="block">
     <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
