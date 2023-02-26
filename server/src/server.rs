@@ -5,7 +5,7 @@ use axum::{
     http::{header::CONTENT_TYPE, Request, StatusCode, Uri},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Json, Router, Server, ServiceExt,
 };
 use include_dir::{include_dir, Dir};
@@ -22,10 +22,8 @@ use tracing::{error, info};
 use crate::dal;
 
 use self::{
-    requests::{CreateUpdateExercise, CreateUpdateExerciseSet},
-    responses::{
-        Exercise, ExerciseCount, ExerciseSet, SetRecommendation, StatisticsOverview, Workout,
-    },
+    requests::{CreateUpdateExercise, CreateUpdateExerciseSet, GetSetSuggestion},
+    responses::{Exercise, ExerciseCount, ExerciseSet, SetSuggestion, StatisticsOverview, Workout},
 };
 
 static STATIC_FILES: Dir<'_> = include_dir!("../client/dist");
@@ -59,10 +57,7 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
             "/workouts/:id/sets",
             get(get_exercise_sets_by_workout_id).route_layer(check_workout_exists_layer()),
         )
-        .route(
-            "/workouts/:id/sets/recommendation",
-            get(get_set_recommendation),
-        )
+        .route("/workouts/:id/sets/suggest", post(get_set_suggestion))
         .route("/exercises", get(get_exercises).post(create_exercise))
         .route(
             "/exercises/:id",
@@ -363,12 +358,14 @@ async fn delete_exercise_set(
         .ok_or_else(|| AppError::StatusCode(StatusCode::NOT_FOUND))
 }
 
-async fn get_set_recommendation(
+async fn get_set_suggestion(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<SetRecommendation>, AppError> {
-    let recommendation = dal::get_set_recommendation_for_workout(&state.pool, id).await?;
-    Ok(Json(SetRecommendation::from(recommendation)))
+    Json(request): Json<GetSetSuggestion>,
+) -> Result<Json<SetSuggestion>, AppError> {
+    let suggestion =
+        dal::get_set_suggestion_for_workout(&state.pool, id, request.exercise_id).await?;
+    Ok(Json(SetSuggestion::from(suggestion)))
 }
 
 async fn get_statistics_overview(
@@ -425,13 +422,19 @@ mod requests {
         pub weight: i64,
         pub note: String,
     }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct GetSetSuggestion {
+        #[serde(rename = "exerciseId")]
+        pub exercise_id: Option<i64>,
+    }
 }
 
 mod responses {
     use serde::{Deserialize, Serialize};
 
     use crate::dal::{
-        ExerciseCountEntity, ExerciseEntity, ExerciseSetEntity, SetRecommendationEntity,
+        ExerciseCountEntity, ExerciseEntity, ExerciseSetEntity, SetSuggestionEntity,
         StatisticsOverviewEntity, WorkoutEntity,
     };
 
@@ -498,15 +501,15 @@ mod responses {
     }
 
     #[derive(Debug, Serialize)]
-    pub struct SetRecommendation {
+    pub struct SetSuggestion {
         #[serde(rename = "exerciseId")]
         pub exercise_id: i64,
         pub repetitions: i64,
         pub weight: i64,
     }
 
-    impl From<SetRecommendationEntity> for SetRecommendation {
-        fn from(value: SetRecommendationEntity) -> Self {
+    impl From<SetSuggestionEntity> for SetSuggestion {
+        fn from(value: SetSuggestionEntity) -> Self {
             Self {
                 exercise_id: value.exercise_id,
                 repetitions: value.repetitions,

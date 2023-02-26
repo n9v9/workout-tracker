@@ -67,7 +67,7 @@
 
         const result = await Promise.all([
             api.getExercises(),
-            setId !== null ? api.getSetByIds(setId) : api.getNewSetRecommendation(workoutId),
+            setId !== null ? api.getSetByIds(setId) : api.suggestNewSet(workoutId, null),
         ]);
         const set = result[1] as ExerciseSet;
 
@@ -201,6 +201,16 @@
         };
         navigate("/sets");
     }
+
+    async function loadNewSuggestion() {
+        const { exerciseId, repetitions, weight } = await api.suggestNewSet(
+            workoutId,
+            inputExerciseId,
+        );
+        inputExerciseId = exerciseId;
+        inputRepetitions = repetitions.toString();
+        inputWeight = weight.toString();
+    }
 </script>
 
 <Title text={setId === null ? $_("new_set") : $_("edit_set")} />
@@ -217,6 +227,7 @@
                             <select
                                 id="exercise"
                                 bind:value={inputExerciseId}
+                                on:change={loadNewSuggestion}
                                 disabled={$uiDisabled}>
                                 {#each exercises as exercise}
                                     <option value={exercise.id}>{exercise.name}</option>

@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, SqliteExecutor};
+use tracing::info;
 
 #[derive(Debug, FromRow)]
 pub struct ExerciseEntity {
@@ -16,7 +17,7 @@ pub struct WorkoutEntity {
 }
 
 #[derive(Debug, FromRow)]
-pub struct SetRecommendationEntity {
+pub struct SetSuggestionEntity {
     pub exercise_id: i64,
     pub repetitions: i64,
     pub weight: i64,
@@ -325,59 +326,118 @@ where
         .with_context(|| format!("Failed to delete exercise set with id {id}"))
 }
 
-pub async fn get_set_recommendation_for_workout<'local, E>(
+pub async fn get_set_suggestion_for_workout<'local, E>(
     conn: E,
-    id: i64,
-) -> Result<SetRecommendationEntity>
+    workout_id: i64,
+    exercise_id: Option<i64>,
+) -> Result<SetSuggestionEntity>
 where
     E: SqliteExecutor<'local> + Copy,
 {
-    // Just recommend the last set again.
-    let recommendation = sqlx::query_as::<_, SetRecommendationEntity>(
-        "
-        SELECT exercise_id, repetitions, weight
-        FROM exercise_set
-        WHERE workout_id = ?
-        ORDER BY created_utc_s DESC
-        LIMIT 1
-        ",
-    )
-    .bind(id)
-    .fetch_optional(conn)
-    .await?;
-
-    if let Some(set) = recommendation {
-        return Ok(set);
-    }
-
-    // Suggest the first set of the last workout that has sets.
-    let recommendation = sqlx::query_as::<_, SetRecommendationEntity>(
-        "
-        SELECT exercise_id, repetitions, weight
-        FROM exercise_set
-        WHERE workout_id = (
-            SELECT MAX(w.id)
-            FROM workout w
-            JOIN exercise_set es ON w.id = es.workout_id
+    let suggest_with_exercise_id = |exercise_id: i64| async move {
+        // Suggest the last set of the same exercise in the same workout.
+        let suggestion = sqlx::query_as::<_, SetSuggestionEntity>(
+            "
+            SELECT exercise_id, repetitions, weight
+            FROM exercise_set
+            WHERE workout_id = ?
+                AND exercise_id = ?
+            ORDER BY created_utc_s DESC
+            LIMIT 1
+            ",
         )
-        ORDER BY created_utc_s
-        LIMIT 1
-        ",
-    )
-    .bind(id)
-    .fetch_optional(conn)
-    .await?;
+        .bind(workout_id)
+        .bind(exercise_id)
+        .fetch_optional(conn)
+        .await?;
 
-    if let Some(set) = recommendation {
-        return Ok(set);
+        if let Some(set) = suggestion {
+            return Ok(set);
+        }
+
+        // Suggest the first set of the same exercise in the most recent workout
+        // that contains this exercise.
+        let suggestion = sqlx::query_as::<_, SetSuggestionEntity>(
+            "
+            SELECT exercise_id, repetitions, weight
+            FROM exercise_set
+            WHERE exercise_id = ?
+                AND workout_id = (
+                SELECT w.id
+                FROM workout w
+                JOIN exercise_set es ON w.id = es.workout_id
+                WHERE es.exercise_id = ?
+                ORDER BY started_utc_s DESC
+                LIMIT 1
+            )
+            ORDER BY created_utc_s
+            LIMIT 1
+            ",
+        )
+        .bind(exercise_id)
+        .bind(exercise_id)
+        .fetch_optional(conn)
+        .await?;
+
+        Ok(suggestion.unwrap_or(SetSuggestionEntity {
+            exercise_id,
+            repetitions: 0,
+            weight: 0,
+        }))
+    };
+
+    let suggest_without_exercise_id = || async {
+        // Just suggest the last set again.
+        let suggestion = sqlx::query_as::<_, SetSuggestionEntity>(
+            "
+            SELECT exercise_id, repetitions, weight
+            FROM exercise_set
+            WHERE workout_id = ?
+            ORDER BY created_utc_s DESC
+            LIMIT 1
+            ",
+        )
+        .bind(workout_id)
+        .fetch_optional(conn)
+        .await?;
+
+        if let Some(set) = suggestion {
+            return Ok(set);
+        }
+
+        // Suggest the first set of the last workout that contains sets.
+        let suggestion = sqlx::query_as::<_, SetSuggestionEntity>(
+            "
+            SELECT exercise_id, repetitions, weight
+            FROM exercise_set
+            WHERE workout_id = (
+                SELECT MAX(w.id)
+                FROM workout w
+                JOIN exercise_set es ON w.id = es.workout_id
+            )
+            ORDER BY created_utc_s
+            LIMIT 1
+            ",
+        )
+        .fetch_optional(conn)
+        .await?;
+
+        if let Some(set) = suggestion {
+            return Ok(set);
+        }
+
+        // Just return some sane defaults.
+        Ok(SetSuggestionEntity {
+            exercise_id: 0,
+            repetitions: 0,
+            weight: 0,
+        })
+    };
+
+    match exercise_id {
+        Some(id) => suggest_with_exercise_id(id).await,
+        None => suggest_without_exercise_id().await,
     }
-
-    // Just return some sane defaults.
-    Ok(SetRecommendationEntity {
-        exercise_id: 0,
-        repetitions: 0,
-        weight: 0,
-    })
 }
 
 pub async fn get_statistics_overview<'local, E>(conn: E) -> Result<StatisticsOverviewEntity>

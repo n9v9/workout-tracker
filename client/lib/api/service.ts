@@ -143,8 +143,11 @@ class ApiService {
         );
     }
 
-    async getNewSetRecommendation(workoutId: number): Promise<ExerciseSet> {
-        return await this.getJson<ExerciseSet>(`workouts/${workoutId}/sets/recommendation`);
+    async suggestNewSet(workoutId: number, exerciseId: number | null = null): Promise<ExerciseSet> {
+        return await this.getJson<ExerciseSet>(`workouts/${workoutId}/sets/suggest`, {
+            method: "POST",
+            body: JSON.stringify({ exerciseId }),
+        });
     }
 
     async getStatistics(): Promise<Statistics> {
@@ -195,25 +198,27 @@ class ApiService {
 
     private async getJson<T>(
         url: RequestInfo,
-        init: RequestInit = null,
+        init: RequestInit | null = null,
         returnsJson: boolean = true,
-    ): Promise<T | null> {
+    ): Promise<T> {
         uiDisabled.set(true);
         isLoading.set(true);
 
+        if (init === null) {
+            init = {};
+        }
+
         try {
-            if (init !== null) {
-                init.headers = {
-                    ...init.headers,
-                    ["Content-Type"]: "application/json",
-                };
-            }
+            init.headers = {
+                ...init.headers,
+                ["Content-Type"]: "application/json",
+            };
 
             const result = await fetch(`${this.prefix}/${url}`, init);
 
             if (!result.ok) {
                 setApiErrorMessage("No connection to the server.");
-                return null;
+                return null as T;
             }
 
             if (returnsJson) {
@@ -221,11 +226,13 @@ class ApiService {
             }
         } catch (err) {
             setApiErrorMessage(`Unexpected error: ${err}`);
-            return null;
+            return null as T;
         } finally {
             uiDisabled.set(false);
             isLoading.set(false);
         }
+
+        return null as T;
     }
 }
 
