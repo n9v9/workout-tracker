@@ -59,5 +59,7 @@
     "language_de": "Deutsch",
     "unit": "Einheit",
     "unit_kg": "Kilogramm (kg)",
-    "unit_lbs": "Pfund (lbs)"
+    "unit_lbs": "Pfund (lbs)",
+    "save_note": "Notiz Speichern",
+    "save_note_success": "Die Notiz wurde gespeichert."
 }

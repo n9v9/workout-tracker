@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, SqliteExecutor};
-use tracing::info;
 
 #[derive(Debug, FromRow)]
 pub struct ExerciseEntity {
@@ -14,6 +13,7 @@ pub struct WorkoutEntity {
     pub id: i64,
     #[sqlx(rename = "started_utc_s")]
     pub started: chrono::DateTime<chrono::Utc>,
+    pub note: Option<String>,
 }
 
 #[derive(Debug, FromRow)]
@@ -122,7 +122,7 @@ pub async fn get_workout<'local, E>(conn: E, id: i64) -> Result<Option<WorkoutEn
 where
     E: SqliteExecutor<'local>,
 {
-    sqlx::query_as("SELECT id, started_utc_s FROM workout WHERE id = ?")
+    sqlx::query_as("SELECT id, started_utc_s, note FROM workout WHERE id = ?")
         .bind(id)
         .fetch_optional(conn)
         .await
@@ -133,7 +133,7 @@ pub async fn get_workouts<'local, E>(conn: E) -> Result<Vec<WorkoutEntity>>
 where
     E: SqliteExecutor<'local>,
 {
-    sqlx::query_as("SELECT id, started_utc_s FROM workout")
+    sqlx::query_as("SELECT id, started_utc_s, note FROM workout")
         .fetch_all(conn)
         .await
         .context("Failed to get workouts")
@@ -146,7 +146,7 @@ where
     sqlx::query_as(
         "
         INSERT INTO workout (started_utc_s) VALUES (UNIXEPOCH(datetime()))
-        RETURNING id, started_utc_s
+        RETURNING id, started_utc_s, note
         ",
     )
     .fetch_one(conn)
@@ -164,6 +164,34 @@ where
         .await
         .with_context(|| format!("Failed to delete workout with id {id}"))
         .map(|res| (res.rows_affected() > 0).then_some(()))
+}
+
+pub async fn update_workout_meta_data<'local, E>(
+    conn: E,
+    id: i64,
+    note: &str,
+) -> Result<Option<WorkoutEntity>>
+where
+    E: SqliteExecutor<'local>,
+{
+    let note = match note.trim() {
+        "" => None,
+        note => Some(note),
+    };
+
+    sqlx::query_as(
+        "
+        UPDATE workout
+        SET note = ?
+        WHERE id = ?
+        RETURNING id, started_utc_s, note
+        ",
+    )
+    .bind(note)
+    .bind(id)
+    .fetch_optional(conn)
+    .await
+    .with_context(|| format!("Failed to update note for workout with id {id}"))
 }
 
 enum ExerciseSetConstraintId {

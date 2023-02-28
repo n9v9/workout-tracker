@@ -19,18 +19,29 @@ type SetEntity = {
     note: string | null;
 };
 
+type WorkoutEntity = {
+    id: number;
+    createdUtcSeconds: number;
+    note: string | null;
+};
+
 class ApiService {
     private prefix = "/api";
 
-    async getWorkoutList(): Promise<Workout[]> {
-        type WorkoutEntity = {
-            id: number;
-            createdUtcSeconds: number;
+    async getWorkout(id: number): Promise<Workout> {
+        const entity = await this.getJson<WorkoutEntity>(`workouts/${id}`);
+        return {
+            id: entity.id,
+            started: new Date(entity.createdUtcSeconds * 1000),
+            note: entity.note ?? "",
         };
+    }
 
+    async getWorkoutList(): Promise<Workout[]> {
         const workouts = (await this.getJson<WorkoutEntity[]>(`workouts`)).map(x => ({
             id: x.id,
             started: new Date(x.createdUtcSeconds * 1000),
+            note: x.note ?? "",
         }));
 
         workouts.sort((a, b) => b.started.getTime() - a.started.getTime());
@@ -54,6 +65,13 @@ class ApiService {
                 method: "POST",
             })
         ).id;
+    }
+
+    async updateWorkoutMetaData(id: number, note: string): Promise<void> {
+        return await this.getJson<void>(`workouts/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ note }),
+        });
     }
 
     async getSetsByWorkoutId(id: number): Promise<ExerciseSet[]> {

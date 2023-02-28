@@ -94,6 +94,9 @@
                 classes="button is-expanded is-justify-content-flex-start"
                 click={() => navigate(`/workouts/${workout.id}`)}>
                 {formatDate(workout.started)}
+                {#if workout.note}
+                    <i class="ml-1 bi bi-chat-left-text has-text-link" />
+                {/if}
             </Button>
             <Button classes="button" click={() => confirmDeletion(workout)}>
                 <span class="icon has-text-danger">

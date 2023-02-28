@@ -1,6 +1,7 @@
 export type Workout = {
     id: number;
     started: Date;
+    note: string;
 };
 
 export type Exercise = {

@@ -22,7 +22,9 @@ use tracing::{error, info};
 use crate::dal;
 
 use self::{
-    requests::{CreateUpdateExercise, CreateUpdateExerciseSet, GetSetSuggestion},
+    requests::{
+        CreateUpdateExercise, CreateUpdateExerciseSet, GetSetSuggestion, UpdateWorkoutMetaData,
+    },
     responses::{Exercise, ExerciseCount, ExerciseSet, SetSuggestion, StatisticsOverview, Workout},
 };
 
@@ -50,6 +52,7 @@ pub async fn run(addr: &SocketAddr, pool: Pool<Sqlite>) {
         .route(
             "/workouts/:id",
             get(get_workout)
+                .put(update_workout_meta_data)
                 .delete(delete_workout)
                 .route_layer(check_workout_exists_layer()),
         )
@@ -268,6 +271,17 @@ async fn delete_workout(
         .ok_or_else(|| AppError::StatusCode(StatusCode::NOT_FOUND))
 }
 
+async fn update_workout_meta_data(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(request): Json<UpdateWorkoutMetaData>,
+) -> Result<Json<Workout>, AppError> {
+    dal::update_workout_meta_data(&state.pool, id, &request.note)
+        .await?
+        .map(|workout| Json(Workout::from(workout)))
+        .ok_or_else(|| AppError::StatusCode(StatusCode::NOT_FOUND))
+}
+
 async fn get_exercise_set(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -428,6 +442,11 @@ mod requests {
         #[serde(rename = "exerciseId")]
         pub exercise_id: Option<i64>,
     }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct UpdateWorkoutMetaData {
+        pub note: String,
+    }
 }
 
 mod responses {
@@ -458,6 +477,7 @@ mod responses {
         pub id: i64,
         #[serde(rename = "createdUtcSeconds")]
         pub created_utc_s: i64,
+        pub note: Option<String>,
     }
 
     impl From<WorkoutEntity> for Workout {
@@ -465,6 +485,7 @@ mod responses {
             Self {
                 id: value.id,
                 created_utc_s: value.started.timestamp(),
+                note: value.note,
             }
         }
     }

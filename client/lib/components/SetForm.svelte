@@ -8,6 +8,7 @@
     import Modal from "./Modal.svelte";
     import Title from "./Title.svelte";
     import { _ } from "svelte-i18n";
+    import MultilineInput from "./MultilineInput.svelte";
 
     export let workoutId: number;
     export let setId: number | null = null;
@@ -17,7 +18,8 @@
     let inputExerciseId: number;
     let inputRepetitions: string;
     let inputWeight: string;
-    let inputNote = "";
+    let inputNote: string;
+    let updateNote: (text: string) => void;
 
     let inputWeightElement: HTMLInputElement;
     // Used to enter a new exercise name and to update an existing name.
@@ -61,8 +63,6 @@
     }
 
     async function load() {
-        document.querySelector("#note").setAttribute("data-content", $_("placeholder_note"));
-
         resetVariables();
 
         const result = await Promise.all([
@@ -75,9 +75,8 @@
         inputExerciseId = set.exerciseId;
         inputRepetitions = set.repetitions.toString();
         inputWeight = set.weight.toString();
-        // Svelte does not support `bind:innerText` so we have to do this manually.
-        // This way, we keep new lines correctly.
-        (document.querySelector("#note") as HTMLElement).innerText = set.note || "";
+        inputNote = set.note || "";
+        updateNote(inputNote);
 
         checkCanSave();
     }
@@ -91,15 +90,11 @@
     }
 
     async function save() {
-        // Svelte does not support `bind:innerText` so we have to do this manually.
-        // This way, we keep new lines correctly.
-        const noteText = (document.querySelector("#note") as HTMLElement).innerText.trim();
-
         await api.createOrUpdateSet(workoutId, setId, {
             exerciseId: inputExerciseId,
             repetitions: parseInt(inputRepetitions),
             weight: parseInt(inputWeight),
-            note: noteText,
+            note: inputNote,
         });
 
         goBack();
@@ -335,14 +330,9 @@
 </div>
 
 <div class="field">
-    <label for="note" class="label">{$_("note")}</label>
-    <div class="control">
-        <span
-            id="note"
-            class="textarea"
-            contenteditable="true"
-            role="textbox"
-            bind:innerHTML={inputNote}>{inputNote}</span>
+    <label for="input-note" class="label">Note</label>
+    <div class="control" id="input-note">
+        <MultilineInput on:change={x => (inputNote = x.detail.text)} bind:setText={updateNote} />
     </div>
 </div>
 
@@ -495,20 +485,6 @@
 
     .btn-group div:not(:last-child) {
         margin-right: 0.75rem;
-    }
-
-    #note {
-        display: block;
-        padding: calc(0.75em - 1px);
-        min-height: 0;
-        height: auto;
-        line-height: 1.5;
-    }
-
-    #note[contenteditable]:empty::before {
-        /* Set in TS above to allow for I18N. */
-        content: attr(data-content);
-        color: gray;
     }
 
     @media only screen and (max-width: 768px) {
