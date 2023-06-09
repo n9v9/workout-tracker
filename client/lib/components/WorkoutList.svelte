@@ -1,6 +1,6 @@
 <script lang="ts">
     import Title from "./Title.svelte";
-    import { navigate } from "svelte-routing";
+    import { push } from "svelte-spa-router";
     import Notification from "./Notification.svelte";
     import Modal from "./Modal.svelte";
     import type { Workout } from "../api/types";
@@ -34,7 +34,7 @@
 
     async function createWorkout() {
         var id = await api.createWorkout();
-        navigate(`/workouts/${id}`);
+        push(`/workouts/${id}`);
     }
 
     async function loadWorkoutList() {
@@ -61,13 +61,13 @@
         </span>
         <span>{$_("new_workout")}</span>
     </Button>
-    <Button classes="button is-fullwidth is-info mt-2" click={() => navigate("/sets")}>
+    <Button classes="button is-fullwidth is-info mt-2" click={() => push("/sets")}>
         <span class="icon">
             <i class="bi bi-search" />
         </span>
         <span>{$_("search_sets")}</span>
     </Button>
-    <Button classes="button is-fullwidth is-info mt-2" click={() => navigate("/statistics")}>
+    <Button classes="button is-fullwidth is-info mt-2" click={() => push("/statistics")}>
         <span class="icon">
             <i class="bi bi-graph-up-arrow" />
         </span>
@@ -92,7 +92,7 @@
         <div class="workout buttons has-addons">
             <Button
                 classes="button is-expanded is-justify-content-flex-start"
-                click={() => navigate(`/workouts/${workout.id}`)}>
+                click={() => push(`/workouts/${workout.id}`)}>
                 {formatDate(workout.started)}
                 {#if workout.note}
                     <i class="ml-1 bi bi-chat-left-text has-text-link" />

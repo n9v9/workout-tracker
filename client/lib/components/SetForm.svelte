@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { navigate } from "svelte-routing";
+    import { push } from "svelte-spa-router";
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
     import { preselectExerciseSet, settings, uiDisabled } from "../store";
@@ -10,8 +10,12 @@
     import { _ } from "svelte-i18n";
     import MultilineInput from "./MultilineInput.svelte";
 
-    export let workoutId: number;
-    export let setId: number | null = null;
+    export let params: { id: string; setId: string | undefined };
+    let workoutId = parseInt(params.id);
+    let setId: number | null = null;
+    if (params.setId) {
+        setId = parseInt(params.setId);
+    }
 
     let exercises: Exercise[] = [];
 
@@ -106,7 +110,7 @@
     }
 
     function goBack() {
-        navigate(`/workouts/${workoutId}`);
+        push(`/workouts/${workoutId}`);
     }
 
     function selectText(e: FocusEvent) {
@@ -194,7 +198,7 @@
             exerciseId: inputExerciseId,
             setId: setId,
         };
-        navigate("/sets");
+        push("/sets");
     }
 
     async function loadNewSuggestion() {

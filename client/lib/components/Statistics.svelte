@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { navigate } from "svelte-routing";
+    import { push } from "svelte-spa-router";
     import { api } from "../api/service";
     import { isLoading } from "../store";
     import Button from "./Button.svelte";
@@ -43,7 +43,7 @@
 <Title text={$_("statistics")} />
 
 <div class="block">
-    <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
+    <Button classes="button is-fullwidth mt-2 is-link" click={() => push("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>

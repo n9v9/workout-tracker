@@ -1,11 +1,20 @@
 <script lang="ts">
     import WorkoutList from "../lib/components/WorkoutList.svelte";
-    import { Router, Route } from "svelte-routing";
     import WorkoutInfo from "../lib/components/WorkoutInfo.svelte";
     import SetForm from "../lib/components/SetForm.svelte";
     import { isLoading, apiErrorMessage } from "../lib/store";
     import Statistics from "../lib/components/Statistics.svelte";
     import SearchSets from "../lib/components/SearchSets.svelte";
+    import Router from "svelte-spa-router";
+
+    let routes = {
+        "/": WorkoutList,
+        "/workouts/:id": WorkoutInfo,
+        "/workouts/:id/sets/add": SetForm,
+        "/workouts/:id/sets/:setId?": SetForm,
+        "/statistics": Statistics,
+        "/sets": SearchSets,
+    };
 </script>
 
 <div class="app">
@@ -18,24 +27,7 @@
             </div>
         {/if}
 
-        <Router>
-            <Route path="/" component={WorkoutList} />
-            <Route path="/workouts/:id" let:params>
-                <WorkoutInfo id={parseInt(params.id)} />
-            </Route>
-            <Route path="/workouts/:id/sets/add" let:params>
-                <SetForm workoutId={parseInt(params.id)} />
-            </Route>
-            <Route path="/workouts/:id/sets/:setId" let:params>
-                <SetForm workoutId={parseInt(params.id)} setId={parseInt(params.setId)} />
-            </Route>
-            <Route path="/statistics">
-                <Statistics />
-            </Route>
-            <Route path="/sets">
-                <SearchSets />
-            </Route>
-        </Router>
+        <Router {routes} />
     </main>
 </div>
 

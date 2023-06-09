@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { navigate } from "svelte-routing";
     import { api } from "../api/service";
     import type { Exercise, ExerciseSet } from "../api/types";
     import { formatDate } from "../date";
@@ -10,6 +9,7 @@
     import Title from "./Title.svelte";
     import UpDownArrow from "./UpDownArrow.svelte";
     import { _ } from "svelte-i18n";
+    import { push } from "svelte-spa-router";
 
     type DisplayExerciseSet = ExerciseSet & { isPersonalBest: boolean };
 
@@ -128,14 +128,14 @@
 
     function navigateToWorkout(setId: number, workoutId: number) {
         $scrollToSetId = setId;
-        navigate(`/workouts/${workoutId}`);
+        push(`/workouts/${workoutId}`);
     }
 </script>
 
 <Title text={$_("search_sets")} />
 
 <div class="block">
-    <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
+    <Button classes="button is-fullwidth mt-2 is-link" click={() => push("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>

@@ -20,7 +20,7 @@
     export let cancel: CancelBehavior;
 </script>
 
-<div class="modal is-active">
+<div class="modal is-active px-4">
     <div class="modal-background" />
     <div class="modal-card">
         <header class="modal-card-head is-flex-wrap-wrap p-0">

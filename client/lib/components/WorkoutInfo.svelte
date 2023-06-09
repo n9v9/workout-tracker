@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { navigate } from "svelte-routing";
+    import { push } from "svelte-spa-router";
     import { api } from "../api/service";
     import Title from "../components/Title.svelte";
     import Notification from "./Notification.svelte";
@@ -12,8 +12,9 @@
     import MultilineInput from "./MultilineInput.svelte";
     import Modal from "./Modal.svelte";
 
-    export let id: number;
+    export let params: { id: string };
 
+    let id = parseInt(params.id);
     let sets: ExerciseSet[] = [];
     let latest: ExerciseSet | null = null;
     let firstExerciseOfLatestSet: ExerciseSet | null = null;
@@ -66,7 +67,7 @@
     });
 
     function editSet(set: ExerciseSet) {
-        navigate(`/workouts/${id}/sets/${set.id}`);
+        push(`/workouts/${id}/sets/${set.id}`);
     }
 
     async function saveNote() {
@@ -79,15 +80,13 @@
 <Title text="Workout" />
 
 <div class="block">
-    <Button
-        classes="button is-fullwidth is-primary"
-        click={() => navigate(`/workouts/${id}/sets/add`)}>
+    <Button classes="button is-fullwidth is-primary" click={() => push(`/workouts/${id}/sets/add`)}>
         <span class="icon">
             <i class="bi bi-plus-lg" />
         </span>
         <span>{$_("new_set")}</span>
     </Button>
-    <Button classes="button is-fullwidth mt-2 is-link" click={() => navigate("/")}>
+    <Button classes="button is-fullwidth mt-2 is-link" click={() => push("/")}>
         <span class="icon">
             <i class="bi bi-box-arrow-in-left" />
         </span>
