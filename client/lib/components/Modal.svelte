@@ -3,6 +3,7 @@
         text: string;
         click: () => void;
         canClick: boolean;
+        isDestructive: boolean;
     };
 
     export type CancelBehavior = {
@@ -34,7 +35,9 @@
             <div class="same-width mr-2">
                 {#if confirm}
                     <Button
-                        classes="button is-fullwidth"
+                        classes="button is-fullwidth {!confirm.isDestructive
+                            ? 'is-info'
+                            : 'has-background-danger has-text-white-ter'}"
                         click={confirm.click}
                         disabled={!confirm.canClick}>{confirm.text}</Button>
                 {/if}

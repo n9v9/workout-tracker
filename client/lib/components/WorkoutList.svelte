@@ -116,6 +116,7 @@
             text: $_("delete"),
             click: deleteWorkout,
             canClick: true,
+            isDestructive: true,
         }}
         cancel={{
             text: $_("cancel"),
@@ -128,7 +129,7 @@
 {:else if showSettingsModal}
     <Modal
         title={$_("settings")}
-        confirm={{ text: $_("save"), click: saveSettings, canClick: true }}
+        confirm={{ text: $_("save"), click: saveSettings, canClick: true, isDestructive: false }}
         cancel={{
             text: $_("cancel"),
             click: () => {

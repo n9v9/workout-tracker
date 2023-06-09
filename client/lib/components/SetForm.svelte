@@ -368,6 +368,7 @@
             text: $_("delete"),
             click: deleteSet,
             canClick: true,
+            isDestructive: true,
         }}
         cancel={{
             text: $_("cancel"),
@@ -382,6 +383,7 @@
             text: $_("save"),
             click: createExercise,
             canClick: canSaveOrUpdateExercise,
+            isDestructive: false,
         }}
         cancel={{
             text: $_("cancel"),
@@ -413,7 +415,12 @@
 {:else if showChangeExerciseModal}
     <Modal
         title={$_("edit_exercise")}
-        confirm={{ text: $_("save"), click: updateExercise, canClick: canSaveOrUpdateExercise }}
+        confirm={{
+            text: $_("save"),
+            click: updateExercise,
+            canClick: canSaveOrUpdateExercise,
+            isDestructive: false,
+        }}
         cancel={{
             text: $_("cancel"),
             click: () => {
@@ -448,6 +455,7 @@
             text: $_("delete"),
             click: deleteExercise,
             canClick: true,
+            isDestructive: true,
         }}
         cancel={{
             text: $_("cancel"),
