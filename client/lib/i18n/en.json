@@ -61,5 +61,8 @@
     "unit_kg": "Kilograms (kg)",
     "unit_lbs": "Pounds (lbs)",
     "save_note": "Save Note",
-    "save_note_success": "The note has been saved."
+    "save_note_success": "The note has been saved.",
+    "create": "Create",
+    "create_workout": "New Workout",
+    "workout_with_near_date_exists": "There already exists a workout which was created recently. Create new workout anyway?"
 }

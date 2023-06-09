@@ -1,5 +1,5 @@
 import { getLocaleFromNavigator } from "svelte-i18n";
-import { writable, type Unsubscriber, type Writable } from "svelte/store";
+import { writable, type Writable } from "svelte/store";
 import { changeLanguage } from "./i18n";
 
 export const isLoading = writable(false);

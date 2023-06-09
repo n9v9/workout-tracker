@@ -15,6 +15,7 @@
     let showDeleteModal = false;
     let selectedWorkout: Workout;
     let showSettingsModal = false;
+    let showWorkoutCreateModal = false;
     let language = $settings.language;
     let unit = $settings.unit;
 
@@ -30,6 +31,21 @@
         showDeleteModal = false;
         await loadWorkoutList();
         showDeleteModal = false;
+    }
+
+    function handleCreateWorkoutClick() {
+        if (workouts.length >= 0) {
+            const latest = workouts[0];
+
+            // If the latest workout was started less than 6 hours ago, ask for confirmation.
+            // This prevents accidentally creating a new workouts.
+            if (new Date().getTime() - latest.started.getTime() < 1000 * 60 * 60 * 6) {
+                showWorkoutCreateModal = true;
+                return;
+            }
+        }
+
+        createWorkout();
     }
 
     async function createWorkout() {
@@ -55,7 +71,7 @@
 <Title text={$_("workouts")} />
 
 <div class="block">
-    <Button classes="button is-fullwidth is-primary" click={createWorkout}>
+    <Button classes="button is-fullwidth is-primary" click={handleCreateWorkoutClick}>
         <span class="icon">
             <i class="bi bi-plus-lg" />
         </span>
@@ -125,6 +141,21 @@
         {$_("delete_workout_confirmation", {
             values: { date: formatDate(selectedWorkout.started) },
         })}
+    </Modal>
+{:else if showWorkoutCreateModal}
+    <Modal
+        title={$_("create_workout")}
+        confirm={{
+            text: $_("create"),
+            click: createWorkout,
+            canClick: true,
+            isDestructive: false,
+        }}
+        cancel={{
+            text: $_("cancel"),
+            click: () => (showWorkoutCreateModal = false),
+        }}>
+        {$_("workout_with_near_date_exists")}
     </Modal>
 {:else if showSettingsModal}
     <Modal
