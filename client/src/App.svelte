@@ -6,9 +6,11 @@
     import Statistics from "../lib/components/Statistics.svelte";
     import SearchSets from "../lib/components/SearchSets.svelte";
     import Router from "svelte-spa-router";
+    import ExerciseList from "../lib/components/ExerciseList.svelte";
 
     let routes = {
         "/": WorkoutList,
+        "/exercises": ExerciseList,
         "/workouts/:id": WorkoutInfo,
         "/workouts/:id/sets/add": SetForm,
         "/workouts/:id/sets/:setId?": SetForm,

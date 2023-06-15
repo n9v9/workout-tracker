@@ -64,5 +64,8 @@
     "save_note_success": "The note has been saved.",
     "create": "Create",
     "create_workout": "New Workout",
-    "workout_with_near_date_exists": "There already exists a workout which was created recently. Create new workout anyway?"
+    "workout_with_near_date_exists": "There already exists a workout which was created recently. Create new workout anyway?",
+    "exercises": "Exercises",
+    "overview": "Overview",
+    "search_for_exercise": "Search for an exercise"
 }

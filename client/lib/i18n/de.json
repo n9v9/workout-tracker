@@ -64,5 +64,8 @@
     "save_note_success": "Die Notiz wurde gespeichert.",
     "create": "Erstellen",
     "create_workout": "Workout Erstellen",
-    "workout_with_near_date_exists": "Es existiert bereits ein Workout welches vor kurzem erstellt wurde. Neues Workout trotzdem erstellen?"
+    "workout_with_near_date_exists": "Es existiert bereits ein Workout welches vor kurzem erstellt wurde. Neues Workout trotzdem erstellen?",
+    "exercises": "Übungen",
+    "overview": "Übersicht",
+    "search_for_exercise": "Suche nach einer Übung"
 }

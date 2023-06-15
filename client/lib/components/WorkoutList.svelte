@@ -77,6 +77,12 @@
         </span>
         <span>{$_("new_workout")}</span>
     </Button>
+    <Button classes="button is-fullwidth is-info mt-2" click={() => push("/exercises")}>
+        <span class="icon">
+            <i class="bi bi-list-ul" />
+        </span>
+        <span>{$_("exercises")}</span>
+    </Button>
     <Button classes="button is-fullwidth is-info mt-2" click={() => push("/sets")}>
         <span class="icon">
             <i class="bi bi-search" />
